@@ -535,4 +535,4 @@ async def shutdown_db_client():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(socket_app, host="0.0.0.0", port=8001)
+    uvicorn.run("server:socket_app", host="0.0.0.0", port=8001, reload=True)
