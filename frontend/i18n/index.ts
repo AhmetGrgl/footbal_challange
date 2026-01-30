@@ -2,6 +2,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import * as Localization from 'expo-localization';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 import tr from './tr.json';
 import en from './en.json';
@@ -14,10 +15,23 @@ const resources = {
 };
 
 const initI18n = async () => {
-  let savedLanguage = await AsyncStorage.getItem(LANGUAGE_KEY);
+  let savedLanguage = 'tr'; // Default to Turkish
+  
+  // Only use AsyncStorage on mobile
+  if (Platform.OS !== 'web') {
+    try {
+      savedLanguage = await AsyncStorage.getItem(LANGUAGE_KEY) || 'tr';
+    } catch (error) {
+      console.log('Failed to load language from storage:', error);
+    }
+  } else {
+    // For web, use localStorage
+    if (typeof window !== 'undefined' && window.localStorage) {
+      savedLanguage = window.localStorage.getItem(LANGUAGE_KEY) || 'tr';
+    }
+  }
   
   if (!savedLanguage) {
-    // Use device language or fallback to Turkish
     const deviceLanguage = Localization.locale.split('-')[0];
     savedLanguage = ['tr', 'en'].includes(deviceLanguage) ? deviceLanguage : 'tr';
   }
@@ -35,7 +49,13 @@ const initI18n = async () => {
 };
 
 export const changeLanguage = async (language: string) => {
-  await AsyncStorage.setItem(LANGUAGE_KEY, language);
+  if (Platform.OS !== 'web') {
+    await AsyncStorage.setItem(LANGUAGE_KEY, language);
+  } else {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(LANGUAGE_KEY, language);
+    }
+  }
   i18n.changeLanguage(language);
 };
 
