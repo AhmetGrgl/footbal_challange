@@ -14,8 +14,6 @@ import { Colors } from '../../constants/colors';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useSocket } from '../../contexts/SocketContext';
-import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 
 const TEAM_PAIRS = [
