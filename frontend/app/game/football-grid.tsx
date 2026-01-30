@@ -94,8 +94,8 @@ export default function FootballGridGame() {
   };
 
   const botMove = () => {
-    const emptyC ells = grid.map((cell, i) => cell === null ? i : null).filter(i => i !== null) as number[];
-    if (emptyCell.length > 0) {
+    const emptyCells = grid.map((cell, i) => cell === null ? i : null).filter(i => i !== null) as number[];
+    if (emptyCells.length > 0) {
       const randomIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
       const newGrid = [...grid];
       newGrid[randomIndex] = 'O';
