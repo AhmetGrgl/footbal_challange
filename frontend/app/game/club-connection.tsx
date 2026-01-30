@@ -18,21 +18,75 @@ import { useSocket } from '../../contexts/SocketContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 
+const TEAM_PAIRS = [
+  ['Real Madrid', 'Barcelona'],
+  ['Real Madrid', 'Fenerbahce'],
+  ['Manchester United', 'Real Madrid'],
+  ['Barcelona', 'PSG'],
+  ['Juventus', 'Real Madrid'],
+];
+
 export default function ClubConnectionGame() {
-  const { room } = useLocalSearchParams();
+  const { room, mode } = useLocalSearchParams();
   const router = useRouter();
   const { t } = useTranslation();
   const { socket } = useSocket();
   const { user } = useAuth();
   
-  const [team1, setTeam1] = useState('Real Madrid');
-  const [team2, setTeam2] = useState('Barcelona');
+  const [team1, setTeam1] = useState('');
+  const [team2, setTeam2] = useState('');
   const [guess, setGuess] = useState('');
   const [score1, setScore1] = useState(0);
   const [score2, setScore2] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isBot, setIsBot] = useState(mode === 'bot');
+  const [botThinking, setBotThinking] = useState(false);
+  const [lastAnswers, setLastAnswers] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Select random teams
+    const randomPair = TEAM_PAIRS[Math.floor(Math.random() * TEAM_PAIRS.length)];
+    setTeam1(randomPair[0]);
+    setTeam2(randomPair[1]);
+  }, []);
+
+  const botMakeGuess = async () => {
+    setBotThinking(true);
+    
+    // Simulate bot thinking
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    try {
+      const players = await api.getPlayers();
+      
+      // Find a correct answer
+      const correctPlayer = players.find((p: any) => {
+        const team1Match = p.teams.some((t: any) => t.team.toLowerCase() === team1.toLowerCase());
+        const team2Match = p.teams.some((t: any) => t.team.toLowerCase() === team2.toLowerCase());
+        return team1Match && team2Match && !lastAnswers.includes(p.name);
+      });
+
+      setBotThinking(false);
+
+      if (correctPlayer) {
+        Alert.alert('Bot scored!', `Bot answered: ${correctPlayer.name}`);
+        setLastAnswers([...lastAnswers, correctPlayer.name]);
+        setScore2(score2 + 1);
+        
+        if (score2 + 1 >= 3) {
+          setGameOver(true);
+          setWinner('Bot');
+        }
+      } else {
+        Alert.alert('Bot missed!', 'Bot could not find an answer');
+      }
+    } catch (error) {
+      setBotThinking(false);
+      console.error('Bot error:', error);
+    }
+  };
 
   const handleSubmitGuess = async () => {
     if (!guess.trim()) {
@@ -42,14 +96,25 @@ export default function ClubConnectionGame() {
 
     setLoading(true);
     try {
-      // Simple validation - check if player exists in database
       const players = await api.getPlayers();
       const foundPlayer = players.find(
         (p: any) => p.name.toLowerCase() === guess.toLowerCase().trim()
       );
 
       if (!foundPlayer) {
-        Alert.alert('Error', 'Player not found!');
+        Alert.alert('Error', 'Player not found in database!');
+        setLoading(false);
+        
+        // Bot's turn if playing vs bot
+        if (isBot && !gameOver) {
+          await botMakeGuess();
+        }
+        return;
+      }
+
+      // Check if player already answered
+      if (lastAnswers.includes(foundPlayer.name)) {
+        Alert.alert('Error', 'This player was already mentioned!');
         setLoading(false);
         return;
       }
@@ -63,15 +128,25 @@ export default function ClubConnectionGame() {
       );
 
       if (team1Match && team2Match) {
-        Alert.alert('Correct!', `${foundPlayer.name} is correct!`);
+        Alert.alert('Correct! 🎉', `${foundPlayer.name} is correct!`);
+        setLastAnswers([...lastAnswers, foundPlayer.name]);
         setScore1(score1 + 1);
+        setGuess('');
+        
         if (score1 + 1 >= 3) {
           setGameOver(true);
           setWinner('You');
+        } else if (isBot && !gameOver) {
+          // Bot's turn
+          await botMakeGuess();
         }
-        setGuess('');
       } else {
-        Alert.alert('Wrong!', 'This player did not play for both teams');
+        Alert.alert('Wrong! ❌', 'This player did not play for both teams');
+        
+        // Bot's turn if playing vs bot
+        if (isBot && !gameOver) {
+          await botMakeGuess();
+        }
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to validate guess');
@@ -81,11 +156,16 @@ export default function ClubConnectionGame() {
   };
 
   const handlePlayAgain = () => {
+    // Select new random teams
+    const randomPair = TEAM_PAIRS[Math.floor(Math.random() * TEAM_PAIRS.length)];
+    setTeam1(randomPair[0]);
+    setTeam2(randomPair[1]);
     setScore1(0);
     setScore2(0);
     setGameOver(false);
     setWinner(null);
     setGuess('');
+    setLastAnswers([]);
   };
 
   const handleExit = () => {
@@ -93,12 +173,15 @@ export default function ClubConnectionGame() {
   };
 
   return (
-    <LinearGradient colors={[Colors.background, Colors.secondary]} style={styles.container}>
+    <LinearGradient colors={['#1a1a2e', '#0f3460']} style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleExit} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>{t('clubConnection')}</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.title}>{t('clubConnection')}</Text>
+          {isBot && <Text style={styles.modeBadge}>🤖 Bot Mode</Text>}
+        </View>
         <View style={styles.placeholder} />
       </View>
 
@@ -108,9 +191,10 @@ export default function ClubConnectionGame() {
             <Text style={styles.scoreName}>You</Text>
             <Text style={styles.scoreValue}>{score1}</Text>
           </View>
+          <Text style={styles.vsText}>VS</Text>
           <View style={styles.scoreItem}>
-            <Text style={styles.scoreName}>Opponent</Text>
-            <Text style={styles.scoreValue}>{score2}</Text>
+            <Text style={styles.scoreName}>{isBot ? 'Bot 🤖' : 'Opponent'}</Text>
+            <Text style={[styles.scoreValue, { color: '#FF6B6B' }]}>{score2}</Text>
           </View>
         </View>
 
@@ -121,7 +205,7 @@ export default function ClubConnectionGame() {
                 <Ionicons name="shield" size={40} color={Colors.accent} />
                 <Text style={styles.teamName}>{team1}</Text>
               </View>
-              <Ionicons name="add" size={32} color={Colors.textSecondary} />
+              <Text style={styles.plusIcon}>+</Text>
               <View style={styles.teamCard}>
                 <Ionicons name="shield" size={40} color={Colors.accent} />
                 <Text style={styles.teamName}>{team2}</Text>
@@ -135,45 +219,63 @@ export default function ClubConnectionGame() {
               </Text>
             </View>
 
-            <View style={styles.inputContainer}>
-              <Ionicons name="person" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Enter player name..."
-                placeholderTextColor={Colors.textSecondary}
-                value={guess}
-                onChangeText={setGuess}
-              />
-            </View>
+            {lastAnswers.length > 0 && (
+              <View style={styles.answersCard}>
+                <Text style={styles.answersTitle}>✅ Correct Answers:</Text>
+                {lastAnswers.map((ans, i) => (
+                  <Text key={i} style={styles.answerText}>• {ans}</Text>
+                ))}
+              </View>
+            )}
 
-            <TouchableOpacity
-              style={styles.submitButton}
-              onPress={handleSubmitGuess}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color={Colors.text} />
-              ) : (
-                <>
-                  <Ionicons name="checkmark-circle" size={20} color={Colors.text} />
-                  <Text style={styles.submitButtonText}>{t('submitGuess')}</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            {botThinking ? (
+              <View style={styles.botThinkingCard}>
+                <ActivityIndicator size="large" color={Colors.accent} />
+                <Text style={styles.botThinkingText}>Bot is thinking...</Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.inputContainer}>
+                  <Ionicons name="person" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter player name..."
+                    placeholderTextColor={Colors.textSecondary}
+                    value={guess}
+                    onChangeText={setGuess}
+                    editable={!loading && !botThinking}
+                  />
+                </View>
+
+                <TouchableOpacity
+                  style={styles.submitButton}
+                  onPress={handleSubmitGuess}
+                  disabled={loading || botThinking}
+                >
+                  {loading ? (
+                    <ActivityIndicator color={Colors.text} />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-circle" size={20} color={Colors.text} />
+                      <Text style={styles.submitButtonText}>{t('submitGuess')}</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
 
             <View style={styles.hintsCard}>
-              <Text style={styles.hintsTitle}>Examples of correct answers:</Text>
+              <Text style={styles.hintsTitle}>💡 Hints:</Text>
               <Text style={styles.hintText}>• Arda Güler (Fenerbahce & Real Madrid)</Text>
+              <Text style={styles.hintText}>• Cristiano Ronaldo (Man Utd & Real Madrid)</Text>
               <Text style={styles.hintText}>• Luis Figo (Barcelona & Real Madrid)</Text>
             </View>
           </>
         ) : (
           <View style={styles.gameOverContainer}>
-            <Ionicons
-              name={winner === 'You' ? 'trophy' : 'sad'}
-              size={80}
-              color={winner === 'You' ? Colors.accent : Colors.error}
-            />
+            <Text style={styles.gameOverEmoji}>
+              {winner === 'You' ? '🏆' : '🤖'}
+            </Text>
             <Text style={styles.gameOverText}>
               {winner === 'You' ? t('youWon') : t('youLost')}
             </Text>
@@ -185,7 +287,7 @@ export default function ClubConnectionGame() {
               <Text style={styles.playAgainButtonText}>{t('playAgain')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.exitButton} onPress={handleExit}>
-              <Text style={styles.exitButtonText}>Exit</Text>
+              <Text style={styles.exitButtonText}>Back to Menu</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -210,14 +312,22 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.card,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerCenter: {
     alignItems: 'center',
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
     color: Colors.text,
+  },
+  modeBadge: {
+    fontSize: 12,
+    color: Colors.accent,
+    marginTop: 4,
   },
   placeholder: {
     width: 40,
@@ -228,7 +338,8 @@ const styles = StyleSheet.create({
   scoreBoard: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    backgroundColor: Colors.card,
+    alignItems: 'center',
+    backgroundColor: 'rgba(26, 71, 42, 0.5)',
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
@@ -248,6 +359,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.accent,
   },
+  vsText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.textSecondary,
+  },
   teamsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -255,7 +371,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   teamCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: 'rgba(26, 71, 42, 0.5)',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
@@ -270,12 +386,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
+  plusIcon: {
+    fontSize: 24,
+    color: Colors.accent,
+    fontWeight: 'bold',
+  },
   instructionCard: {
     flexDirection: 'row',
-    backgroundColor: Colors.primary + '30',
+    backgroundColor: 'rgba(0, 168, 107, 0.2)',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 24,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.primary,
     alignItems: 'center',
@@ -286,10 +407,41 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     flex: 1,
   },
+  answersCard: {
+    backgroundColor: 'rgba(78, 205, 196, 0.2)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#4ECDC4',
+  },
+  answersTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#4ECDC4',
+    marginBottom: 8,
+  },
+  answerText: {
+    fontSize: 13,
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  botThinkingCard: {
+    backgroundColor: 'rgba(255, 107, 107, 0.2)',
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  botThinkingText: {
+    fontSize: 16,
+    color: Colors.text,
+    marginTop: 12,
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.card,
+    backgroundColor: 'rgba(26, 71, 42, 0.5)',
     borderRadius: 12,
     marginBottom: 16,
     paddingHorizontal: 16,
@@ -321,16 +473,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   hintsCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
   },
   hintsTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.text,
+    color: Colors.accent,
     marginBottom: 12,
   },
   hintText: {
@@ -342,11 +494,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 40,
   },
+  gameOverEmoji: {
+    fontSize: 80,
+    marginBottom: 16,
+  },
   gameOverText: {
     fontSize: 32,
     fontWeight: 'bold',
     color: Colors.text,
-    marginTop: 24,
     marginBottom: 16,
   },
   finalScore: {
