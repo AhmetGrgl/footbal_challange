@@ -28,8 +28,6 @@ export default function ClubConnectionGame() {
   const { room, mode } = useLocalSearchParams();
   const router = useRouter();
   const { t } = useTranslation();
-  const { socket } = useSocket();
-  const { user } = useAuth();
   
   const [team1, setTeam1] = useState('');
   const [team2, setTeam2] = useState('');
