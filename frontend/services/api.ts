@@ -1,8 +1,17 @@
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Use relative URL for API calls - this works with the proxy configuration
-const BACKEND_URL = '';
+// Get backend URL from environment - use proxy URL or construct from window.location
+const getBackendUrl = () => {
+  if (typeof window !== 'undefined') {
+    // On web, use the same origin (ingress routes /api/* to backend)
+    return window.location.origin;
+  }
+  // On native, use the env variable
+  return process.env.EXPO_PUBLIC_BACKEND_URL || '';
+};
+
+const BACKEND_URL = getBackendUrl();
 
 const TOKEN_KEY = '@session_token';
 
