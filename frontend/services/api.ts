@@ -1,7 +1,8 @@
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BACKEND_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8001';
+// Use relative URL for API calls - this works with the proxy configuration
+const BACKEND_URL = '';
 
 const TOKEN_KEY = '@session_token';
 
