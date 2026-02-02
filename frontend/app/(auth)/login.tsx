@@ -13,10 +13,10 @@ import {
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
-import { Colors } from '../../constants/colors';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Animatable from 'react-native-animatable';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -28,7 +28,7 @@ export default function Login() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill all fields');
+      Alert.alert('Hata', 'Lütfen tüm alanları doldurun');
       return;
     }
 
@@ -37,7 +37,7 @@ export default function Login() {
       await login(email, password);
       router.replace('/(tabs)');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Login failed');
+      Alert.alert('Hata', error.message || 'Giriş başarısız');
     } finally {
       setLoading(false);
     }
@@ -48,32 +48,39 @@ export default function Login() {
     try {
       await loginWithGoogle();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Google login failed');
+      Alert.alert('Hata', error.message || 'Google girişi başarısız');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <LinearGradient colors={[Colors.background, Colors.secondary]} style={styles.container}>
+    <LinearGradient colors={['#0a0e27', '#162447', '#1f4068']} style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <Ionicons name="football" size={80} color={Colors.accent} />
-            <Text style={styles.title}>{t('footballChallenge')}</Text>
-            <Text style={styles.subtitle}>{t('login')}</Text>
-          </View>
+          <Animatable.View animation="fadeInDown" duration={1000} style={styles.header}>
+            <Text style={styles.emoji}>⚽</Text>
+            <LinearGradient
+              colors={['#ffd700', '#ffed4e', '#ffd700']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.titleGradient}
+            >
+              <Text style={styles.title}>FOOTBALL CHALLENGE</Text>
+            </LinearGradient>
+            <Text style={styles.subtitle}>Giriş Yap</Text>
+          </Animatable.View>
 
-          <View style={styles.form}>
+          <Animatable.View animation="fadeInUp" duration={1000} delay={300} style={styles.form}>
             <View style={styles.inputContainer}>
-              <Ionicons name="mail" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
+              <Ionicons name="mail" size={20} color="#888" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder={t('email')}
-                placeholderTextColor={Colors.textSecondary}
+                placeholder="E-posta"
+                placeholderTextColor="#888"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -82,11 +89,11 @@ export default function Login() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
+              <Ionicons name="lock-closed" size={20} color="#888" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder={t('password')}
-                placeholderTextColor={Colors.textSecondary}
+                placeholder="Şifre"
+                placeholderTextColor="#888"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -94,37 +101,39 @@ export default function Login() {
             </View>
 
             <TouchableOpacity
-              style={[styles.button, styles.primaryButton]}
+              style={styles.loginButton}
               onPress={handleLogin}
               disabled={loading}
             >
-              {loading ? (
-                <ActivityIndicator color={Colors.text} />
-              ) : (
-                <Text style={styles.buttonText}>{t('login')}</Text>
-              )}
+              <LinearGradient colors={['#00ff88', '#00cc6f']} style={styles.buttonGradient}>
+                {loading ? (
+                  <ActivityIndicator color="#1a1a2e" />
+                ) : (
+                  <Text style={styles.buttonText}>Giriş Yap</Text>
+                )}
+              </LinearGradient>
             </TouchableOpacity>
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
+              <Text style={styles.dividerText}>VEYA</Text>
               <View style={styles.dividerLine} />
             </View>
 
             <TouchableOpacity
-              style={[styles.button, styles.googleButton]}
+              style={styles.googleButton}
               onPress={handleGoogleLogin}
               disabled={loading}
             >
-              <Ionicons name="logo-google" size={20} color={Colors.text} />
-              <Text style={[styles.buttonText, { marginLeft: 8 }]}>{t('loginWithGoogle')}</Text>
+              <Ionicons name="logo-google" size={24} color="#fff" />
+              <Text style={styles.googleButtonText}>Google ile Giriş Yap</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => router.push('/(auth)/register')} style={styles.linkContainer}>
-              <Text style={styles.linkText}>{t('dontHaveAccount')} </Text>
-              <Text style={[styles.linkText, styles.linkBold]}>{t('register')}</Text>
+              <Text style={styles.linkText}>Hesabınız yok mu? </Text>
+              <Text style={[styles.linkText, styles.linkBold]}>Kayıt Ol</Text>
             </TouchableOpacity>
-          </View>
+          </Animatable.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
@@ -132,101 +141,27 @@ export default function Login() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 48,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: Colors.text,
-    marginTop: 16,
-  },
-  subtitle: {
-    fontSize: 18,
-    color: Colors.textSecondary,
-    marginTop: 8,
-  },
-  form: {
-    width: '100%',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.card,
-    borderRadius: 12,
-    marginBottom: 16,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    height: 50,
-    color: Colors.text,
-    fontSize: 16,
-  },
-  button: {
-    height: 50,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
-  },
-  primaryButton: {
-    backgroundColor: Colors.primary,
-    marginTop: 8,
-  },
-  googleButton: {
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  buttonText: {
-    color: Colors.text,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.border,
-  },
-  dividerText: {
-    color: Colors.textSecondary,
-    marginHorizontal: 16,
-    fontSize: 14,
-  },
-  linkContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 24,
-  },
-  linkText: {
-    color: Colors.textSecondary,
-    fontSize: 14,
-  },
-  linkBold: {
-    color: Colors.accent,
-    fontWeight: '600',
-  },
+  container: { flex: 1 },
+  keyboardView: { flex: 1 },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', padding: 24 },
+  header: { alignItems: 'center', marginBottom: 48 },
+  emoji: { fontSize: 80, marginBottom: 16 },
+  titleGradient: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 15 },
+  title: { fontSize: 28, fontWeight: 'bold', color: '#1a1a2e', letterSpacing: 2, textAlign: 'center' },
+  subtitle: { fontSize: 20, color: '#fff', marginTop: 16, fontWeight: '600' },
+  form: { width: '100%' },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12, marginBottom: 16, paddingHorizontal: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  inputIcon: { marginRight: 12 },
+  input: { flex: 1, height: 50, color: '#fff', fontSize: 16 },
+  loginButton: { marginTop: 8, borderRadius: 12, overflow: 'hidden' },
+  buttonGradient: { height: 50, justifyContent: 'center', alignItems: 'center' },
+  buttonText: { color: '#1a1a2e', fontSize: 18, fontWeight: 'bold' },
+  divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 24 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.2)' },
+  dividerText: { color: '#888', marginHorizontal: 16, fontSize: 12, fontWeight: '600' },
+  googleButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.1)', height: 50, borderRadius: 12, gap: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  googleButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  linkContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 24 },
+  linkText: { color: '#888', fontSize: 14 },
+  linkBold: { color: '#ffd700', fontWeight: '700' },
 });
