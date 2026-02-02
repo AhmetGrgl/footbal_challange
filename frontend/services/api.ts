@@ -6,13 +6,10 @@ const BACKEND_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || proc
 const TOKEN_KEY = '@session_token';
 
 export const api = {
-  // Auth
   async processSessionId(sessionId: string) {
     const response = await fetch(`${BACKEND_URL}/api/auth/session`, {
       method: 'POST',
-      headers: {
-        'X-Session-ID': sessionId,
-      },
+      headers: { 'X-Session-ID': sessionId },
     });
     if (!response.ok) throw new Error('Failed to process session');
     const data = await response.json();
@@ -20,11 +17,11 @@ export const api = {
     return data;
   },
 
-  async register(email: string, password: string, name: string, language: string) {
+  async register(email: string, password: string, name: string, username: string, age: number, gender: string, language: string) {
     const response = await fetch(`${BACKEND_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name, language }),
+      body: JSON.stringify({ email, password, name, username, age, gender, language }),
     });
     if (!response.ok) {
       const error = await response.json();
@@ -33,6 +30,23 @@ export const api = {
     const data = await response.json();
     await AsyncStorage.setItem(TOKEN_KEY, data.session_token);
     return data;
+  },
+
+  async completeProfile(username: string, age: number, gender: string, avatar: string, location?: string) {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const response = await fetch(`${BACKEND_URL}/api/auth/complete-profile`, {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json' 
+      },
+      body: JSON.stringify({ username, age, gender, avatar, location }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Profile completion failed');
+    }
+    return response.json();
   },
 
   async login(email: string, password: string) {
@@ -77,7 +91,19 @@ export const api = {
     return response.json();
   },
 
-  // Users
+  async updateProfile(data: any) {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const response = await fetch(`${BACKEND_URL}/api/users/profile`, {
+      method: 'PUT',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json' 
+      },
+      body: JSON.stringify(data),
+    });
+    return response.json();
+  },
+
   async updateLanguage(language: string) {
     const token = await AsyncStorage.getItem(TOKEN_KEY);
     const response = await fetch(`${BACKEND_URL}/api/users/language?language=${language}`, {
@@ -87,7 +113,14 @@ export const api = {
     return response.json();
   },
 
-  // Players
+  async searchUsers(username: string) {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const response = await fetch(`${BACKEND_URL}/api/users/search?username=${username}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.json();
+  },
+
   async getPlayers() {
     const response = await fetch(`${BACKEND_URL}/api/players`);
     return response.json();
@@ -98,7 +131,6 @@ export const api = {
     return response.json();
   },
 
-  // Friends
   async getFriends() {
     const token = await AsyncStorage.getItem(TOKEN_KEY);
     const response = await fetch(`${BACKEND_URL}/api/friends`, {
@@ -130,6 +162,25 @@ export const api = {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     });
+    return response.json();
+  },
+
+  async finishGame(gameMode: string, won: boolean) {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const response = await fetch(`${BACKEND_URL}/api/game/finish?game_mode=${gameMode}&won=${won}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.json();
+  },
+
+  async getGlobalLeaderboard() {
+    const response = await fetch(`${BACKEND_URL}/api/leaderboard/global`);
+    return response.json();
+  },
+
+  async getLocationLeaderboard(location: string) {
+    const response = await fetch(`${BACKEND_URL}/api/leaderboard/location?location=${location}`);
     return response.json();
   },
 
