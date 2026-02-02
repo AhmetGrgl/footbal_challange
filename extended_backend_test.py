@@ -38,11 +38,13 @@ class ExtendedAPITester:
         print("🔧 Setting up authenticated user...")
         
         # Register a test user
+        import time
+        timestamp = int(time.time())
         test_data = {
-            "email": "apitest@example.com",
+            "email": f"apitest{timestamp}@example.com",
             "password": "Test123!",
             "name": "API Test User",
-            "username": "apitest456",
+            "username": f"apitest{timestamp}",
             "age": 30,
             "gender": "female",
             "language": "en"
