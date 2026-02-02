@@ -262,7 +262,7 @@ class ExtendedAPITester:
         
         # Test sequence
         tests_passed = 0
-        total_tests = 5
+        total_tests = 4
         
         # 1. Test Players Database
         if self.test_players_database():
