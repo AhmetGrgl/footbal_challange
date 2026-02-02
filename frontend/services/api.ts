@@ -1,14 +1,18 @@
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Get backend URL from environment - use proxy URL or construct from window.location
+// Get backend URL from environment
 const getBackendUrl = () => {
+  // Always use the proxy URL from environment for API calls
+  const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+  if (backendUrl) {
+    return backendUrl;
+  }
+  // Fallback: on web use same origin, on native use empty
   if (typeof window !== 'undefined') {
-    // On web, use the same origin (ingress routes /api/* to backend)
     return window.location.origin;
   }
-  // On native, use the env variable
-  return process.env.EXPO_PUBLIC_BACKEND_URL || '';
+  return '';
 };
 
 const BACKEND_URL = getBackendUrl();
