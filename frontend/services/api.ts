@@ -1,21 +1,9 @@
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Get backend URL from environment
-const getBackendUrl = () => {
-  // Always use the proxy URL from environment for API calls
-  const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
-  if (backendUrl) {
-    return backendUrl;
-  }
-  // Fallback: on web use same origin, on native use empty
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-  return '';
-};
-
-const BACKEND_URL = getBackendUrl();
+// Backend URL - use the preview URL for both web and native
+// The /api/* routes are proxied to the backend via ingress
+const BACKEND_URL = 'https://football-quiz-37.preview.emergentagent.com';
 
 const TOKEN_KEY = '@session_token';
 
