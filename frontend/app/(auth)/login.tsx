@@ -104,6 +104,9 @@ export default function Login() {
               style={styles.loginButton}
               onPress={handleLogin}
               disabled={loading}
+              testID="login-button"
+              accessibilityRole="button"
+              activeOpacity={0.8}
             >
               <LinearGradient colors={['#00ff88', '#00cc6f']} style={styles.buttonGradient}>
                 {loading ? (
