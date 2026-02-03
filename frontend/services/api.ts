@@ -3,12 +3,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 // Backend URL configuration
-// For local development, use localhost:8001 directly
-// The nginx/ingress proxy is not reliable, so we connect directly to backend
+// Use the preview URL that properly routes /api/* to backend
 const getBackendUrl = (): string => {
   // Check if running on web
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    // Get current hostname to determine environment
     const hostname = window.location.hostname;
     
     // If localhost, connect directly to backend
@@ -16,15 +14,27 @@ const getBackendUrl = (): string => {
       return 'http://localhost:8001';
     }
     
-    // For preview URLs, use the same origin (proxy handles /api routing)
+    // For preview URLs (emergentagent.com), use same origin - ingress routes /api
+    if (hostname.includes('emergentagent.com') || hostname.includes('preview')) {
+      return window.location.origin;
+    }
+    
+    // Fallback to current origin
     return window.location.origin;
   }
   
-  // For native apps, use environment variable
-  const expoBackendUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL;
-  if (expoBackendUrl) return expoBackendUrl;
+  // For native apps (Expo Go), use the preview URL
+  // This URL has proper ingress routing for /api/*
+  const previewUrl = 'https://reg-flow-test.preview.emergentagent.com';
   
-  return process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8001';
+  // Try expo config first
+  const expoBackendUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL;
+  if (expoBackendUrl && !expoBackendUrl.includes('ngrok')) {
+    return expoBackendUrl;
+  }
+  
+  // Use preview URL for mobile
+  return previewUrl;
 };
 
 const BACKEND_URL = getBackendUrl();
