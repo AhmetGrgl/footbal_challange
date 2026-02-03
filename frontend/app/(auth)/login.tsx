@@ -168,4 +168,6 @@ const styles = StyleSheet.create({
   linkContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 24 },
   linkText: { color: '#888', fontSize: 14 },
   linkBold: { color: '#ffd700', fontWeight: '700' },
+  forgotContainer: { alignItems: 'center', marginTop: 16 },
+  forgotText: { color: '#ffd700', fontSize: 14, fontWeight: '600' },
 });
