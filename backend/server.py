@@ -92,6 +92,13 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
 class UpdateProfileRequest(BaseModel):
     username: Optional[str] = None
     age: Optional[int] = None
