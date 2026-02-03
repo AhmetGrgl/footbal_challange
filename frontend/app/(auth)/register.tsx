@@ -57,6 +57,7 @@ export default function Register() {
   
   const { register } = useAuth();
   const router = useRouter();
+  const { playClick, playSuccess, playError, playGoal } = useSounds();
 
   // Ball animation
   const rotateAnim = new Animated.Value(0);
