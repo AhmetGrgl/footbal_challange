@@ -114,6 +114,10 @@ export default function Login() {
               </LinearGradient>
             </TouchableOpacity>
 
+            <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={styles.forgotContainer}>
+              <Text style={styles.forgotText}>Şifremi Unuttum</Text>
+            </TouchableOpacity>
+
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
               <Text style={styles.dividerText}>VEYA</Text>
