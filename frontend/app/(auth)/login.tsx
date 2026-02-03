@@ -72,7 +72,10 @@ export default function Login() {
   });
 
   const handleLogin = async () => {
+    playClick();
+    
     if (!email || !password) {
+      playError();
       Alert.alert('Dikkat! ⚠️', 'E-posta ve şifre alanlarını doldurmalısın');
       return;
     }
@@ -87,8 +90,11 @@ export default function Login() {
       }
       
       await login(email, password);
+      playWhistle();
+      playSuccess();
       router.replace('/(tabs)');
     } catch (error: any) {
+      playError();
       const errorMsg = error.message || 'Giriş başarısız';
       if (errorMsg.includes('401') || errorMsg.toLowerCase().includes('invalid') || errorMsg.toLowerCase().includes('hatal')) {
         Alert.alert('Hatalı Giriş ⚠️', 'E-posta veya şifre yanlış, tekrar dene!');
