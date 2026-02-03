@@ -407,6 +407,87 @@ async def logout(request: Request, response: Response):
     response.delete_cookie("session_token")
     return {"message": "Logged out"}
 
+@api_router.get("/auth/check-username")
+async def check_username(username: str):
+    """Check if username is available and valid"""
+    # Validate username format: alphanumeric only, 3-20 chars
+    import re
+    if not username or len(username) < 3 or len(username) > 20:
+        return {"available": False, "error": "Kullanıcı adı 3-20 karakter olmalı"}
+    
+    if not re.match(r'^[a-zA-Z0-9]+$', username):
+        return {"available": False, "error": "Kullanıcı adı sadece harf ve rakam içerebilir"}
+    
+    existing = await db.users.find_one({"username": username.lower()}, {"_id": 0})
+    if existing:
+        return {"available": False, "error": "Bu kullanıcı adı zaten alınmış"}
+    
+    return {"available": True}
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(data: ForgotPasswordRequest):
+    """Send password reset email (simulated)"""
+    logger.info(f"Forgot password request for: {data.email}")
+    
+    user = await db.users.find_one({"email": data.email}, {"_id": 0})
+    
+    # Always return success to prevent email enumeration
+    # In production, send actual email here
+    if user:
+        # Generate reset token
+        reset_token = f"reset_{uuid.uuid4().hex}"
+        await db.password_resets.insert_one({
+            "email": data.email,
+            "token": reset_token,
+            "created_at": datetime.now(timezone.utc),
+            "expires_at": datetime.now(timezone.utc) + timedelta(hours=1),
+            "used": False
+        })
+        logger.info(f"Password reset token created for: {data.email}")
+        # In production: send email with reset link
+    
+    return {"message": "Şifre sıfırlama bağlantısı gönderildi"}
+
+@api_router.post("/auth/reset-password")
+async def reset_password(data: ResetPasswordRequest):
+    """Reset password with token"""
+    logger.info(f"Reset password attempt with token: {data.token[:20]}...")
+    
+    reset_record = await db.password_resets.find_one({
+        "token": data.token,
+        "used": False
+    })
+    
+    if not reset_record:
+        raise HTTPException(status_code=400, detail="Geçersiz veya süresi dolmuş token")
+    
+    expires_at = reset_record["expires_at"]
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    
+    if expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Token süresi dolmuş")
+    
+    # Validate new password
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Şifre en az 6 karakter olmalı")
+    
+    # Update password
+    hashed_pw = hash_password(data.new_password)
+    await db.users.update_one(
+        {"email": reset_record["email"]},
+        {"$set": {"password_hash": hashed_pw}}
+    )
+    
+    # Mark token as used
+    await db.password_resets.update_one(
+        {"token": data.token},
+        {"$set": {"used": True}}
+    )
+    
+    logger.info(f"Password reset successful for: {reset_record['email']}")
+    return {"message": "Şifre başarıyla değiştirildi"}
+
 # ============ USER ROUTES ============
 
 @api_router.get("/users/profile")
