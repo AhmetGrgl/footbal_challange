@@ -166,28 +166,35 @@ export default function Register() {
   };
 
   const handleRegister = async () => {
+    playClick();
+    
     // Validations
     if (!name || !username || !email || !password || !passwordConfirm || !age || !gender) {
+      playError();
       Alert.alert('Eksik Bilgi ⚠️', 'Lütfen tüm alanları doldur');
       return;
     }
 
     if (usernameStatus === 'taken' || usernameStatus === 'invalid') {
+      playError();
       Alert.alert('Kullanıcı Adı Sorunu ⚠️', usernameMessage);
       return;
     }
 
     if (password !== passwordConfirm) {
+      playError();
       Alert.alert('Şifre Uyuşmuyor ⚠️', 'Şifreler aynı değil, kontrol et');
       return;
     }
 
     if (password.length < 6) {
+      playError();
       Alert.alert('Şifre Çok Kısa ⚠️', 'Şifren en az 6 karakter olmalı');
       return;
     }
 
     if (!acceptedTerms) {
+      playError();
       Alert.alert('Şartlar ⚠️', 'Kullanım şartlarını kabul etmelisin');
       return;
     }
@@ -195,8 +202,11 @@ export default function Register() {
     setLoading(true);
     try {
       await register(email, password, name, username, parseInt(age), gender, language);
+      playGoal();
+      playSuccess();
       router.replace('/(tabs)');
     } catch (error: any) {
+      playError();
       Alert.alert('Kayıt Başarısız 😕', error.message || 'Bir hata oluştu');
     } finally {
       setLoading(false);
