@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSounds } from '../../contexts/SoundContext';
 
 const STADIUM_BG = require('../../assets/images/stadium-bg.png');
 
