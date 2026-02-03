@@ -3,31 +3,33 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 // Backend URL configuration
-// Use EXPO_PUBLIC_ prefixed env vars for Expo compatibility
+// For local development, use localhost:8001 directly
+// The nginx/ingress proxy is not reliable, so we connect directly to backend
 const getBackendUrl = (): string => {
-  // For web platform, use the proxy URL that routes to backend
-  if (Platform.OS === 'web') {
-    // Use environment variable with EXPO_PUBLIC_ prefix
-    const proxyUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
-    if (proxyUrl) return proxyUrl;
+  // Check if running on web
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    // Get current hostname to determine environment
+    const hostname = window.location.hostname;
     
-    // Fallback - try current window origin
-    if (typeof window !== 'undefined' && window.location) {
-      return window.location.origin;
+    // If localhost, connect directly to backend
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:8001';
     }
+    
+    // For preview URLs, use the same origin (proxy handles /api routing)
+    return window.location.origin;
   }
   
-  // For native (iOS/Android), use expo config or env
+  // For native apps, use environment variable
   const expoBackendUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL;
   if (expoBackendUrl) return expoBackendUrl;
   
-  // Final fallback
-  return process.env.EXPO_PUBLIC_BACKEND_URL || '';
+  return process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8001';
 };
 
 const BACKEND_URL = getBackendUrl();
 
-console.log('[API] Platform:', Platform.OS, '| Backend URL:', BACKEND_URL || '(empty - using relative)');
+console.log('[API] Platform:', Platform.OS, '| Backend URL:', BACKEND_URL);
 
 const TOKEN_KEY = '@session_token';
 
