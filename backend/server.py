@@ -801,19 +801,21 @@ async def leave_matchmaking(sid, data):
         ]
     await sio.emit('left_queue', {}, to=sid)
 
-# Include router
-app.include_router(api_router)
-
-# Mount Socket.IO
-socket_app = socketio.ASGIApp(sio, app)
-
+# CORS middleware must be added BEFORE routes
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+# Include router
+app.include_router(api_router)
+
+# Mount Socket.IO
+socket_app = socketio.ASGIApp(sio, app)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
