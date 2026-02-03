@@ -296,7 +296,7 @@ async def register(data: RegisterRequest, response: Response):
         "user_id": user_id,
         "email": data.email,
         "name": data.name,
-        "username": data.username,
+        "username": username_lower,
         "picture": None,
         "avatar": "⚽",
         "age": data.age,
