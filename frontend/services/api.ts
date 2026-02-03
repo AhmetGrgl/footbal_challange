@@ -1,36 +1,11 @@
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Backend URL configuration
-// Use the EXPO_PACKAGER_PROXY_URL which has ingress routing for /api/*
-const getBackendUrl = () => {
-  // For web preview, use the ngrok proxy URL from env
-  const proxyUrl = process.env.EXPO_PACKAGER_PROXY_URL;
-  if (proxyUrl) {
-    console.log('[API] Using proxy URL from env');
-    return proxyUrl;
-  }
-  
-  // Try expo config
-  const expoUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL;
-  if (expoUrl) return expoUrl;
-  
-  // Fallback to process.env BACKEND_URL
-  const envUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
-  if (envUrl) return envUrl;
-  
-  // If on web, try current origin
-  if (typeof window !== 'undefined' && window.location) {
-    return window.location.origin;
-  }
-  
-  // Default empty for relative paths
-  return '';
-};
+// Backend URL configuration - ngrok proxy URL for API routing
+// This URL is set by the environment and routes /api/* to backend
+const BACKEND_URL = 'https://futbol-challenge-28.ngrok.io';
 
-const BACKEND_URL = getBackendUrl();
-
-console.log('[API] Using backend URL:', BACKEND_URL || '(relative path)');
+console.log('[API] Using backend URL:', BACKEND_URL);
 
 const TOKEN_KEY = '@session_token';
 
