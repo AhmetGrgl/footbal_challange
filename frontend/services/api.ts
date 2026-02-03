@@ -1,14 +1,13 @@
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Backend URL - use the proxy URL for API calls
-// The /api/* routes are proxied to the backend via ingress
+// Backend URL configuration
+// The ingress routes /api/* to the backend service
 const getBackendUrl = () => {
-  // For web, use empty string to use relative paths (same origin)
-  // The ingress routes /api/* to backend automatically
-  if (typeof window !== 'undefined') {
-    // On web, use relative URL - ingress handles routing to backend
-    return '';
+  // First check if we're on web and try to use current origin
+  if (typeof window !== 'undefined' && window.location) {
+    // Use current origin - ingress handles /api routing
+    return window.location.origin;
   }
   
   // For native apps, try expo config
