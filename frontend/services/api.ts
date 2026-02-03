@@ -2,21 +2,27 @@ import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Backend URL configuration
-// The ingress routes /api/* to the backend service
+// Use the EXPO_PACKAGER_PROXY_URL which has ingress routing for /api/*
 const getBackendUrl = () => {
-  // First check if we're on web and try to use current origin
-  if (typeof window !== 'undefined' && window.location) {
-    // Use current origin - ingress handles /api routing
-    return window.location.origin;
+  // For web preview, use the ngrok proxy URL from env
+  const proxyUrl = process.env.EXPO_PACKAGER_PROXY_URL;
+  if (proxyUrl) {
+    console.log('[API] Using proxy URL from env');
+    return proxyUrl;
   }
   
-  // For native apps, try expo config
+  // Try expo config
   const expoUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL;
   if (expoUrl) return expoUrl;
   
-  // Fallback to process.env
+  // Fallback to process.env BACKEND_URL
   const envUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
   if (envUrl) return envUrl;
+  
+  // If on web, try current origin
+  if (typeof window !== 'undefined' && window.location) {
+    return window.location.origin;
+  }
   
   // Default empty for relative paths
   return '';
