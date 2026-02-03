@@ -34,6 +34,7 @@ export default function Login() {
   const [onlineCount] = useState(Math.floor(Math.random() * 5000) + 8000);
   const { login, loginWithGoogle } = useAuth();
   const router = useRouter();
+  const { playClick, playSuccess, playError, playWhistle } = useSounds();
 
   // Ball rotation animation
   const rotateAnim = new Animated.Value(0);
