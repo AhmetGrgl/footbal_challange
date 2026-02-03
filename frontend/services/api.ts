@@ -1,28 +1,31 @@
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Backend URL - use the proxy URL for web preview
-// On fork, the URL changes, so we use environment variable
+// Backend URL - use the proxy URL for API calls
+// The /api/* routes are proxied to the backend via ingress
 const getBackendUrl = () => {
-  // First try expo config
+  // For web, use empty string to use relative paths (same origin)
+  // The ingress routes /api/* to backend automatically
+  if (typeof window !== 'undefined') {
+    // On web, use relative URL - ingress handles routing to backend
+    return '';
+  }
+  
+  // For native apps, try expo config
   const expoUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL;
   if (expoUrl) return expoUrl;
   
-  // Then try process.env
+  // Fallback to process.env
   const envUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
   if (envUrl) return envUrl;
   
-  // Fallback to packager proxy URL
-  const proxyUrl = process.env.EXPO_PACKAGER_PROXY_URL;
-  if (proxyUrl) return proxyUrl;
-  
-  // Default fallback - use relative path for web
+  // Default empty for relative paths
   return '';
 };
 
 const BACKEND_URL = getBackendUrl();
 
-console.log('[API] Using backend URL:', BACKEND_URL);
+console.log('[API] Using backend URL:', BACKEND_URL || '(relative path)');
 
 const TOKEN_KEY = '@session_token';
 
