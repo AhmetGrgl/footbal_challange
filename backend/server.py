@@ -265,17 +265,29 @@ async def process_session_id(
 @api_router.post("/auth/register")
 async def register(data: RegisterRequest, response: Response):
     """Register with email/password"""
+    import re
     logger.info(f"Register attempt for: {data.email}")
+    
+    # Validate username format
+    if not data.username or len(data.username) < 3 or len(data.username) > 20:
+        raise HTTPException(status_code=400, detail="Kullanıcı adı 3-20 karakter olmalı")
+    
+    if not re.match(r'^[a-zA-Z0-9]+$', data.username):
+        raise HTTPException(status_code=400, detail="Kullanıcı adı sadece harf ve rakam içerebilir")
+    
+    # Validate password
+    if len(data.password) < 6:
+        raise HTTPException(status_code=400, detail="Şifre en az 6 karakter olmalı")
     
     existing = await db.users.find_one({"email": data.email}, {"_id": 0})
     if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="Bu e-posta zaten kayıtlı")
     
-    # Check username uniqueness
-    if data.username:
-        username_exists = await db.users.find_one({"username": data.username}, {"_id": 0})
-        if username_exists:
-            raise HTTPException(status_code=400, detail="Username already taken")
+    # Check username uniqueness (case-insensitive)
+    username_lower = data.username.lower()
+    username_exists = await db.users.find_one({"username": username_lower}, {"_id": 0})
+    if username_exists:
+        raise HTTPException(status_code=400, detail="Bu kullanıcı adı zaten alınmış")
     
     user_id = f"user_{uuid.uuid4().hex[:12]}"
     hashed_pw = hash_password(data.password)
