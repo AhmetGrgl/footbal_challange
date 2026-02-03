@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Backend URL - use the preview URL for both web and native
 // The /api/* routes are proxied to the backend via ingress
-const BACKEND_URL = 'https://football-quiz-37.preview.emergentagent.com';
+const BACKEND_URL = 'https://reg-flow-test.preview.emergentagent.com';
 
 const TOKEN_KEY = '@session_token';
 
