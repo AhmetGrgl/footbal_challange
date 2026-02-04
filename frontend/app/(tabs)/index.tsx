@@ -116,10 +116,15 @@ export default function HomeScreen() {
             </LinearGradient>
           </Animatable.View>
 
-          {/* Game Cards Row - First 3 */}
-          <View style={styles.gamesRow}>
+          {/* Game Cards - Horizontal Scroll like image */}
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.gamesScrollContent}
+            style={styles.gamesScroll}
+          >
             {/* Değer Tahmini */}
-            <Animatable.View animation="fadeInUp" delay={400} style={styles.gameCardWrapper}>
+            <Animatable.View animation="fadeInRight" delay={400} style={styles.gameCardWrapper}>
               <TouchableOpacity
                 style={styles.gameCard}
                 onPress={() => handleGamePress('value-guess')}
@@ -145,7 +150,7 @@ export default function HomeScreen() {
             </Animatable.View>
 
             {/* Gizli Oyuncu */}
-            <Animatable.View animation="fadeInUp" delay={500} style={styles.gameCardWrapper}>
+            <Animatable.View animation="fadeInRight" delay={500} style={styles.gameCardWrapper}>
               <TouchableOpacity
                 style={styles.gameCard}
                 onPress={() => handleGamePress('mystery-player')}
@@ -174,7 +179,7 @@ export default function HomeScreen() {
             </Animatable.View>
 
             {/* Kariyer Yolu */}
-            <Animatable.View animation="fadeInUp" delay={600} style={styles.gameCardWrapper}>
+            <Animatable.View animation="fadeInRight" delay={600} style={styles.gameCardWrapper}>
               <TouchableOpacity
                 style={styles.gameCard}
                 onPress={() => handleGamePress('career-path')}
@@ -198,12 +203,9 @@ export default function HomeScreen() {
                 </LinearGradient>
               </TouchableOpacity>
             </Animatable.View>
-          </View>
 
-          {/* Game Cards Row - Second 3 */}
-          <View style={styles.gamesRow}>
             {/* Harf Avı */}
-            <Animatable.View animation="fadeInUp" delay={700} style={styles.gameCardWrapper}>
+            <Animatable.View animation="fadeInRight" delay={700} style={styles.gameCardWrapper}>
               <TouchableOpacity
                 style={styles.gameCard}
                 onPress={() => handleGamePress('letter-hunt')}
@@ -228,7 +230,7 @@ export default function HomeScreen() {
             </Animatable.View>
 
             {/* Takım Bağlantısı */}
-            <Animatable.View animation="fadeInUp" delay={800} style={styles.gameCardWrapper}>
+            <Animatable.View animation="fadeInRight" delay={800} style={styles.gameCardWrapper}>
               <TouchableOpacity
                 style={styles.gameCard}
                 onPress={() => handleGamePress('club-connection')}
@@ -253,7 +255,7 @@ export default function HomeScreen() {
             </Animatable.View>
 
             {/* Futbol Tablosu */}
-            <Animatable.View animation="fadeInUp" delay={900} style={styles.gameCardWrapper}>
+            <Animatable.View animation="fadeInRight" delay={900} style={styles.gameCardWrapper}>
               <TouchableOpacity
                 style={styles.gameCard}
                 onPress={() => handleGamePress('football-grid')}
@@ -276,7 +278,7 @@ export default function HomeScreen() {
                 </LinearGradient>
               </TouchableOpacity>
             </Animatable.View>
-          </View>
+          </ScrollView>
 
           {/* Bottom Football */}
           <View style={styles.bottomSection}>
