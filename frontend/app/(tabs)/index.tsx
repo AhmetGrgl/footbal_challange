@@ -19,12 +19,11 @@ import * as Animatable from 'react-native-animatable';
 
 const HOME_BG = require('../../assets/images/home-bg.jpg');
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 48) / 3;
 
 export default function HomeScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const { playClick, isMusicPlaying, toggleBackgroundMusic, isSoundEnabled, toggleSound } = useSounds();
+  const { playClick } = useSounds();
   
   const [pulseAnim] = useState(new Animated.Value(1));
 
@@ -32,14 +31,14 @@ export default function HomeScreen() {
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.03,
-          duration: 1200,
+          toValue: 1.02,
+          duration: 1500,
           easing: Easing.ease,
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 1200,
+          duration: 1500,
           easing: Easing.ease,
           useNativeDriver: true,
         }),
@@ -47,99 +46,10 @@ export default function HomeScreen() {
     ).start();
   }, []);
 
-  // 6 Oyun Modu - Resimdeki gibi
-  const gameModes = [
-    { 
-      id: 'value-guess', 
-      name: 'Değer Tahmini', 
-      icon: '💰',
-      subtitle: '€',
-      colors: ['#2E7D32', '#1B5E20', '#004D00'],
-    },
-    { 
-      id: 'mystery-player', 
-      name: 'Gizli Oyuncu', 
-      icon: '❓',
-      subtitle: '🕵️',
-      colors: ['#6A1B9A', '#4A148C', '#311B92'],
-    },
-    { 
-      id: 'career-path', 
-      name: 'Kariyer Yolu', 
-      icon: '📈',
-      subtitle: '💼',
-      colors: ['#1565C0', '#0D47A1', '#01579B'],
-    },
-    { 
-      id: 'letter-hunt', 
-      name: 'Harf Avı', 
-      icon: '🔤',
-      subtitle: 'ABC',
-      colors: ['#C62828', '#B71C1C', '#8E0000'],
-    },
-    { 
-      id: 'club-connection', 
-      name: 'Takım Bağlantısı', 
-      icon: '🔗',
-      subtitle: '⚽',
-      colors: ['#00838F', '#006064', '#004D40'],
-    },
-    { 
-      id: 'football-grid', 
-      name: 'Futbol Tablosu', 
-      icon: '⚡',
-      subtitle: '🏆',
-      colors: ['#EF6C00', '#E65100', '#BF360C'],
-    },
-  ];
-
   const handleGamePress = (gameId: string) => {
     playClick();
     router.push(`/game/${gameId}`);
   };
-
-  const renderGameCard = (mode: typeof gameModes[0], index: number) => (
-    <Animatable.View
-      key={mode.id}
-      animation="fadeInUp"
-      duration={800}
-      delay={300 + index * 100}
-      style={styles.gameCardWrapper}
-    >
-      <TouchableOpacity
-        style={styles.gameCard}
-        onPress={() => handleGamePress(mode.id)}
-        activeOpacity={0.9}
-      >
-        <LinearGradient
-          colors={mode.colors}
-          style={styles.gameCardGradient}
-        >
-          {/* Main Icon */}
-          <View style={styles.gameIconContainer}>
-            <Text style={styles.gameMainIcon}>{mode.icon}</Text>
-            <Text style={styles.gameSubIcon}>{mode.subtitle}</Text>
-          </View>
-          
-          {/* Game Name */}
-          <Text style={styles.gameName}>{mode.name}</Text>
-          
-          {/* Play Button */}
-          <TouchableOpacity 
-            style={styles.gamePlayButton}
-            onPress={() => handleGamePress(mode.id)}
-          >
-            <LinearGradient
-              colors={['#00FF87', '#00CC6F', '#00994D']}
-              style={styles.gamePlayGradient}
-            >
-              <Text style={styles.gamePlayText}>Şimdi Oyna</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </LinearGradient>
-      </TouchableOpacity>
-    </Animatable.View>
-  );
 
   return (
     <ImageBackground source={HOME_BG} style={styles.container} resizeMode="cover">
@@ -157,67 +67,215 @@ export default function HomeScreen() {
             </View>
           </Animatable.View>
 
-          {/* Stats Card - Skor Tablosu */}
+          {/* Stats Card - Exactly like the image */}
           <Animatable.View animation="fadeInUp" duration={1000} delay={200}>
-            <View style={styles.statsCardContainer}>
-              <LinearGradient
-                colors={['#3D8B40', '#2E7D32', '#1B5E20']}
-                style={styles.statsCard}
-              >
+            <LinearGradient
+              colors={['#4CAF50', '#388E3C', '#2E7D32']}
+              style={styles.statsCard}
+            >
+              {/* Golden glow border effect */}
+              <View style={styles.statsInnerBorder}>
                 {/* Stats Row */}
                 <View style={styles.statsRow}>
                   {/* Kazanç with Trophy */}
                   <View style={styles.statItem}>
                     <Text style={styles.trophyEmoji}>🏆</Text>
-                    <Text style={styles.statLabel}>Kazanç</Text>
+                    <Text style={styles.statLabelGold}>Kazanç</Text>
                   </View>
 
                   {/* Kayıp */}
                   <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{user?.stats?.losses || 0}</Text>
+                    <Text style={styles.statValueLarge}>{user?.stats?.losses || 0}</Text>
                     <Text style={styles.statLabel}>Kayıp</Text>
                   </View>
 
                   {/* Toplam Oyun */}
                   <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{user?.stats?.total_games || 0}</Text>
+                    <Text style={styles.statValueLarge}>{user?.stats?.total_games || 0}</Text>
                     <Text style={styles.statLabel}>Toplam Oyun</Text>
                   </View>
                 </View>
 
-                {/* Green field line */}
-                <View style={styles.fieldLine} />
-
                 {/* Şimdi Oyna Button */}
-                <Animated.View style={[styles.playButtonContainer, { transform: [{ scale: pulseAnim }] }]}>
-                  <TouchableOpacity 
-                    style={styles.playButton}
-                    onPress={() => {
-                      playClick();
-                      router.push('/game/mystery-player');
-                    }}
-                    activeOpacity={0.9}
+                <TouchableOpacity 
+                  style={styles.playButton}
+                  onPress={() => {
+                    playClick();
+                    router.push('/game/mystery-player');
+                  }}
+                  activeOpacity={0.9}
+                >
+                  <LinearGradient
+                    colors={['#4CAF50', '#388E3C']}
+                    style={styles.playButtonGradient}
                   >
-                    <LinearGradient
-                      colors={['#FFD700', '#FFC107', '#FF9800']}
-                      style={styles.playButtonGradient}
-                    >
-                      <Text style={styles.playButtonText}>Şimdi Oyna</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </Animated.View>
-              </LinearGradient>
-            </View>
+                    <Text style={styles.playButtonText}>Şimdi Oyna</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
           </Animatable.View>
 
-          {/* Game Cards - First Row (3 cards) */}
+          {/* Game Cards Row - First 3 */}
           <View style={styles.gamesRow}>
-            {gameModes.slice(0, 3).map((mode, index) => renderGameCard(mode, index))}
+            {/* Değer Tahmini */}
+            <Animatable.View animation="fadeInUp" delay={400} style={styles.gameCardWrapper}>
+              <TouchableOpacity
+                style={styles.gameCard}
+                onPress={() => handleGamePress('value-guess')}
+                activeOpacity={0.9}
+              >
+                <LinearGradient
+                  colors={['#4CAF50', '#388E3C', '#1B5E20']}
+                  style={styles.gameCardGradient}
+                >
+                  <View style={styles.gameImageArea}>
+                    <Text style={styles.moneyBag}>💰</Text>
+                    <Text style={styles.euroSign}>€</Text>
+                    <Text style={styles.coins}>🪙🪙🪙</Text>
+                  </View>
+                  <Text style={styles.gameName}>Değer Tahmini</Text>
+                  <TouchableOpacity style={styles.gamePlayBtn} onPress={() => handleGamePress('value-guess')}>
+                    <LinearGradient colors={['#00E676', '#00C853']} style={styles.gamePlayGradient}>
+                      <Text style={styles.gamePlayText}>Şimdi Oyna</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animatable.View>
+
+            {/* Gizli Oyuncu */}
+            <Animatable.View animation="fadeInUp" delay={500} style={styles.gameCardWrapper}>
+              <TouchableOpacity
+                style={styles.gameCard}
+                onPress={() => handleGamePress('mystery-player')}
+                activeOpacity={0.9}
+              >
+                <LinearGradient
+                  colors={['#9C27B0', '#7B1FA2', '#4A148C']}
+                  style={styles.gameCardGradient}
+                >
+                  <View style={styles.gameImageArea}>
+                    <Text style={styles.questionMark}>❓</Text>
+                    <Text style={styles.silhouette}>👤</Text>
+                    <View style={styles.questionMarksRow}>
+                      <Text style={styles.smallQuestion}>❓</Text>
+                      <Text style={styles.smallQuestion}>❓</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.gameName}>Gizli Oyuncu</Text>
+                  <TouchableOpacity style={styles.gamePlayBtn} onPress={() => handleGamePress('mystery-player')}>
+                    <LinearGradient colors={['#00E676', '#00C853']} style={styles.gamePlayGradient}>
+                      <Text style={styles.gamePlayText}>Şimdi Oyna</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animatable.View>
+
+            {/* Kariyer Yolu */}
+            <Animatable.View animation="fadeInUp" delay={600} style={styles.gameCardWrapper}>
+              <TouchableOpacity
+                style={styles.gameCard}
+                onPress={() => handleGamePress('career-path')}
+                activeOpacity={0.9}
+              >
+                <LinearGradient
+                  colors={['#4CAF50', '#388E3C', '#1B5E20']}
+                  style={styles.gameCardGradient}
+                >
+                  <View style={styles.gameImageArea}>
+                    <Text style={styles.briefcase}>💼</Text>
+                    <Text style={styles.chart}>📈</Text>
+                    <Text style={styles.moneyStack}>💵</Text>
+                  </View>
+                  <Text style={styles.gameName}>Kariyer Yolu</Text>
+                  <TouchableOpacity style={styles.gamePlayBtn} onPress={() => handleGamePress('career-path')}>
+                    <LinearGradient colors={['#00E676', '#00C853']} style={styles.gamePlayGradient}>
+                      <Text style={styles.gamePlayText}>Şimdi Oyna</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animatable.View>
           </View>
 
-          {/* Game Cards - Second Row (3 cards) */}
+          {/* Game Cards Row - Second 3 */}
           <View style={styles.gamesRow}>
-            {gameModes.slice(3, 6).map((mode, index) => renderGameCard(mode, index + 3))}
+            {/* Harf Avı */}
+            <Animatable.View animation="fadeInUp" delay={700} style={styles.gameCardWrapper}>
+              <TouchableOpacity
+                style={styles.gameCard}
+                onPress={() => handleGamePress('letter-hunt')}
+                activeOpacity={0.9}
+              >
+                <LinearGradient
+                  colors={['#F44336', '#D32F2F', '#B71C1C']}
+                  style={styles.gameCardGradient}
+                >
+                  <View style={styles.gameImageArea}>
+                    <Text style={styles.letters}>🔤</Text>
+                    <Text style={styles.abc}>ABC</Text>
+                  </View>
+                  <Text style={styles.gameName}>Harf Avı</Text>
+                  <TouchableOpacity style={styles.gamePlayBtn} onPress={() => handleGamePress('letter-hunt')}>
+                    <LinearGradient colors={['#00E676', '#00C853']} style={styles.gamePlayGradient}>
+                      <Text style={styles.gamePlayText}>Şimdi Oyna</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animatable.View>
+
+            {/* Takım Bağlantısı */}
+            <Animatable.View animation="fadeInUp" delay={800} style={styles.gameCardWrapper}>
+              <TouchableOpacity
+                style={styles.gameCard}
+                onPress={() => handleGamePress('club-connection')}
+                activeOpacity={0.9}
+              >
+                <LinearGradient
+                  colors={['#00BCD4', '#00ACC1', '#00838F']}
+                  style={styles.gameCardGradient}
+                >
+                  <View style={styles.gameImageArea}>
+                    <Text style={styles.link}>🔗</Text>
+                    <Text style={styles.football}>⚽</Text>
+                  </View>
+                  <Text style={styles.gameName}>Takım Bağlantısı</Text>
+                  <TouchableOpacity style={styles.gamePlayBtn} onPress={() => handleGamePress('club-connection')}>
+                    <LinearGradient colors={['#00E676', '#00C853']} style={styles.gamePlayGradient}>
+                      <Text style={styles.gamePlayText}>Şimdi Oyna</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animatable.View>
+
+            {/* Futbol Tablosu */}
+            <Animatable.View animation="fadeInUp" delay={900} style={styles.gameCardWrapper}>
+              <TouchableOpacity
+                style={styles.gameCard}
+                onPress={() => handleGamePress('football-grid')}
+                activeOpacity={0.9}
+              >
+                <LinearGradient
+                  colors={['#FF9800', '#F57C00', '#E65100']}
+                  style={styles.gameCardGradient}
+                >
+                  <View style={styles.gameImageArea}>
+                    <Text style={styles.lightning}>⚡</Text>
+                    <Text style={styles.trophy}>🏆</Text>
+                  </View>
+                  <Text style={styles.gameName}>Futbol Tablosu</Text>
+                  <TouchableOpacity style={styles.gamePlayBtn} onPress={() => handleGamePress('football-grid')}>
+                    <LinearGradient colors={['#00E676', '#00C853']} style={styles.gamePlayGradient}>
+                      <Text style={styles.gamePlayText}>Şimdi Oyna</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animatable.View>
           </View>
 
           {/* Bottom Football */}
@@ -225,30 +283,6 @@ export default function HomeScreen() {
             <Text style={styles.bottomBall}>⚽</Text>
           </View>
         </ScrollView>
-
-        {/* Sound Controls */}
-        <View style={styles.soundControls}>
-          <TouchableOpacity 
-            style={styles.soundBtn} 
-            onPress={() => { playClick(); toggleSound(); }}
-          >
-            <Ionicons 
-              name={isSoundEnabled ? "volume-high" : "volume-mute"} 
-              size={20} 
-              color="#FFD700" 
-            />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.soundBtn} 
-            onPress={() => { playClick(); toggleBackgroundMusic(); }}
-          >
-            <Ionicons 
-              name={isMusicPlaying ? "musical-notes" : "musical-notes-outline"} 
-              size={20} 
-              color={isMusicPlaying ? "#00FF87" : "#FFD700"} 
-            />
-          </TouchableOpacity>
-        </View>
       </View>
     </ImageBackground>
   );
@@ -260,99 +294,111 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 10, 20, 0.3)',
   },
   scrollContent: {
     paddingHorizontal: 12,
-    paddingTop: 50,
+    paddingTop: 40,
     paddingBottom: 100,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   welcomeText: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '500',
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: '600',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 4,
   },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
   userName: {
-    fontSize: 30,
+    fontSize: 36,
     fontWeight: '900',
     color: '#FFD700',
-    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowColor: 'rgba(0,0,0,0.9)',
     textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 6,
+    textShadowRadius: 8,
   },
   ballEmoji: {
-    fontSize: 30,
+    fontSize: 36,
   },
-  statsCardContainer: {
-    borderRadius: 20,
-    marginBottom: 16,
-    borderWidth: 3,
-    borderColor: '#FFD700',
-    overflow: 'hidden',
-  },
+  // Stats Card - Like the image
   statsCard: {
-    padding: 12,
-    paddingBottom: 16,
+    borderRadius: 24,
+    padding: 4,
+    marginBottom: 16,
+    borderWidth: 4,
+    borderColor: '#FFD700',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  statsInnerBorder: {
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 20,
+    padding: 16,
   },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingVertical: 8,
+    marginBottom: 12,
   },
   statItem: {
     alignItems: 'center',
-    minWidth: 80,
+    minWidth: 90,
   },
   trophyEmoji: {
-    fontSize: 36,
+    fontSize: 50,
   },
-  statValue: {
-    fontSize: 32,
+  statValueLarge: {
+    fontSize: 42,
     fontWeight: '900',
     color: '#FFD700',
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    textShadowRadius: 3,
   },
   statLabel: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#fff',
     fontWeight: '700',
-    marginTop: 2,
+    marginTop: 4,
   },
-  fieldLine: {
-    height: 3,
-    backgroundColor: 'rgba(255,255,255,0.4)',
-    marginVertical: 10,
-    marginHorizontal: -12,
-  },
-  playButtonContainer: {
-    marginHorizontal: 50,
+  statLabelGold: {
+    fontSize: 16,
+    color: '#FFD700',
+    fontWeight: '700',
+    marginTop: 4,
   },
   playButton: {
+    marginHorizontal: 40,
     borderRadius: 25,
     overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   playButtonGradient: {
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: 'center',
   },
   playButtonText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '900',
-    color: '#1a1a2e',
-    letterSpacing: 1,
+    color: '#fff',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
+  // Game Cards
   gamesRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -363,49 +409,134 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   gameCard: {
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'rgba(255,215,0,0.5)',
+    borderWidth: 3,
+    borderColor: 'rgba(255,215,0,0.6)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
   },
   gameCardGradient: {
     padding: 10,
     alignItems: 'center',
-    minHeight: 150,
+    minHeight: 170,
     justifyContent: 'space-between',
   },
-  gameIconContainer: {
+  gameImageArea: {
+    height: 80,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
+    position: 'relative',
   },
-  gameMainIcon: {
-    fontSize: 36,
+  // Değer Tahmini emojis
+  moneyBag: {
+    fontSize: 50,
+    position: 'absolute',
   },
-  gameSubIcon: {
+  euroSign: {
+    fontSize: 24,
+    position: 'absolute',
+    bottom: 0,
+    left: 10,
+    color: '#FFD700',
+    fontWeight: 'bold',
+  },
+  coins: {
+    fontSize: 16,
+    position: 'absolute',
+    bottom: -5,
+    right: 5,
+  },
+  // Gizli Oyuncu emojis
+  questionMark: {
+    fontSize: 30,
+    position: 'absolute',
+    top: -5,
+  },
+  silhouette: {
+    fontSize: 50,
+    opacity: 0.8,
+  },
+  questionMarksRow: {
+    flexDirection: 'row',
+    position: 'absolute',
+    bottom: 0,
+    gap: 30,
+  },
+  smallQuestion: {
+    fontSize: 20,
+  },
+  // Kariyer Yolu emojis
+  briefcase: {
+    fontSize: 45,
+  },
+  chart: {
+    fontSize: 24,
+    position: 'absolute',
+    top: 0,
+    right: 5,
+  },
+  moneyStack: {
+    fontSize: 20,
+    position: 'absolute',
+    bottom: -5,
+    left: 5,
+  },
+  // Harf Avı
+  letters: {
+    fontSize: 50,
+  },
+  abc: {
     fontSize: 18,
-    marginTop: -4,
+    color: '#FFD700',
+    fontWeight: '900',
+    position: 'absolute',
+    bottom: -5,
+  },
+  // Takım Bağlantısı
+  link: {
+    fontSize: 45,
+  },
+  football: {
+    fontSize: 30,
+    position: 'absolute',
+    bottom: -10,
+    right: 10,
+  },
+  // Futbol Tablosu
+  lightning: {
+    fontSize: 45,
+  },
+  trophy: {
+    fontSize: 30,
+    position: 'absolute',
+    bottom: -5,
   },
   gameName: {
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '900',
     color: '#fff',
     textAlign: 'center',
-    marginVertical: 6,
-    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowColor: 'rgba(0,0,0,0.8)',
     textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 4,
+    marginVertical: 6,
   },
-  gamePlayButton: {
-    borderRadius: 12,
+  gamePlayBtn: {
+    borderRadius: 15,
     overflow: 'hidden',
     width: '100%',
   },
   gamePlayGradient: {
-    paddingVertical: 6,
+    paddingVertical: 8,
     alignItems: 'center',
+    borderRadius: 15,
   },
   gamePlayText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '800',
     color: '#1a1a2e',
   },
@@ -415,24 +546,6 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   bottomBall: {
-    fontSize: 60,
-    opacity: 0.9,
-  },
-  soundControls: {
-    position: 'absolute',
-    top: 50,
-    right: 12,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  soundBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,215,0,0.4)',
+    fontSize: 70,
   },
 });
