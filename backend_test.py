@@ -9,11 +9,8 @@ from typing import Dict, Any
 BACKEND_URL = "https://career-path-mode.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
-class AuthAPITester:
+class CareerPathAPITester:
     def __init__(self):
-        self.session_token = None
-        self.test_user_email = "test123@example.com"
-        self.test_user_password = "password123"
         self.results = []
 
     def log_test(self, test_name: str, success: bool, details: str):
@@ -26,300 +23,255 @@ class AuthAPITester:
             "details": details
         })
 
-    def test_check_username_availability(self):
-        """Test username availability check endpoint"""
-        print("\n=== Testing Username Availability Check ===")
+    def test_random_player_endpoint(self):
+        """Test GET /api/career-path/random-player endpoint"""
+        print("\n=== Testing Career Path Random Player ===")
         
-        # Test 1: Check unused username
+        # Test 1: Get random player (all difficulties)
         try:
-            response = requests.get(f"{API_BASE}/auth/check-username", 
-                                  params={"username": "uniqueuser123"})
+            response = requests.get(f"{API_BASE}/career-path/random-player")
             if response.status_code == 200:
                 data = response.json()
-                if data.get("available") == True:
-                    self.log_test("Username Check (unused)", True, 
-                                f"Response: {data}")
+                required_fields = ['name', 'team_history', 'nationality', 'position', 'age']
+                
+                # Check if all required fields are present
+                missing_fields = [field for field in required_fields if field not in data]
+                if not missing_fields:
+                    self.log_test("Random Player (all)", True, 
+                                f"Player: {data.get('name')}, Nationality: {data.get('nationality')}, Position: {data.get('position')}, Age: {data.get('age')}, Teams: {len(data.get('team_history', []))}")
                 else:
-                    self.log_test("Username Check (unused)", False, 
-                                f"Expected available=true, got: {data}")
+                    self.log_test("Random Player (all)", False, 
+                                f"Missing fields: {missing_fields}. Got: {list(data.keys())}")
             else:
-                self.log_test("Username Check (unused)", False, 
+                self.log_test("Random Player (all)", False, 
                             f"HTTP {response.status_code}: {response.text}")
         except Exception as e:
-            self.log_test("Username Check (unused)", False, f"Exception: {e}")
+            self.log_test("Random Player (all)", False, f"Exception: {e}")
 
-        # Test 2: Check invalid username (special chars)
+        # Test 2: Get random player with difficulty filter (easy)
         try:
-            response = requests.get(f"{API_BASE}/auth/check-username", 
-                                  params={"username": "test_user!"})
+            response = requests.get(f"{API_BASE}/career-path/random-player", 
+                                  params={"difficulty": "easy"})
             if response.status_code == 200:
                 data = response.json()
-                if data.get("available") == False and "rakam" in data.get("error", ""):
-                    self.log_test("Username Check (special chars)", True, 
-                                f"Turkish error message: {data}")
+                if data.get('difficulty') == 'easy' or 'name' in data:
+                    self.log_test("Random Player (easy)", True, 
+                                f"Easy player: {data.get('name')}")
                 else:
-                    self.log_test("Username Check (special chars)", False, 
-                                f"Expected Turkish error for special chars, got: {data}")
+                    self.log_test("Random Player (easy)", False, 
+                                f"Expected easy player, got: {data}")
             else:
-                self.log_test("Username Check (special chars)", False, 
+                self.log_test("Random Player (easy)", False, 
                             f"HTTP {response.status_code}: {response.text}")
         except Exception as e:
-            self.log_test("Username Check (special chars)", False, f"Exception: {e}")
+            self.log_test("Random Player (easy)", False, f"Exception: {e}")
 
-    def test_user_registration(self):
-        """Test user registration endpoint"""
-        print("\n=== Testing User Registration ===")
-        
-        # Test 1: Valid registration
+        # Test 3: Get random player with difficulty filter (medium)
         try:
-            registration_data = {
-                "email": self.test_user_email,
-                "password": self.test_user_password,
-                "name": "John Doe",
-                "username": "johndoe123",
-                "age": 25,
-                "gender": "male",
-                "language": "tr"
-            }
-            response = requests.post(f"{API_BASE}/auth/register", 
-                                   json=registration_data)
+            response = requests.get(f"{API_BASE}/career-path/random-player", 
+                                  params={"difficulty": "medium"})
             if response.status_code == 200:
                 data = response.json()
-                if "user_id" in data and "session_token" in data:
-                    self.session_token = data["session_token"]
-                    self.log_test("User Registration (valid)", True, 
-                                f"User created: {data['user_id']}")
+                if 'name' in data:
+                    self.log_test("Random Player (medium)", True, 
+                                f"Medium player: {data.get('name')}")
                 else:
-                    self.log_test("User Registration (valid)", False, 
-                                f"Missing user_id or session_token: {data}")
+                    self.log_test("Random Player (medium)", False, 
+                                f"Invalid response structure: {data}")
             else:
-                self.log_test("User Registration (valid)", False, 
+                self.log_test("Random Player (medium)", False, 
                             f"HTTP {response.status_code}: {response.text}")
         except Exception as e:
-            self.log_test("User Registration (valid)", False, f"Exception: {e}")
+            self.log_test("Random Player (medium)", False, f"Exception: {e}")
 
-        # Test 2: Invalid username with special characters
+        # Test 4: Get random player with difficulty filter (hard)
         try:
-            invalid_data = {
-                "email": "test124@example.com",
-                "password": "password123",
-                "name": "Test",
-                "username": "test_user!",
-                "age": 25,
-                "gender": "male",
-                "language": "tr"
-            }
-            response = requests.post(f"{API_BASE}/auth/register", 
-                                   json=invalid_data)
-            if response.status_code == 400:
-                error_text = response.text
-                if "rakam" in error_text:
-                    self.log_test("Registration (invalid username)", True, 
-                                f"Turkish error for special chars: {error_text}")
-                else:
-                    self.log_test("Registration (invalid username)", False, 
-                                f"Expected Turkish error for special chars, got: {error_text}")
-            else:
-                self.log_test("Registration (invalid username)", False, 
-                            f"Expected 400 error, got HTTP {response.status_code}: {response.text}")
-        except Exception as e:
-            self.log_test("Registration (invalid username)", False, f"Exception: {e}")
-
-        # Test 3: Short password
-        try:
-            short_password_data = {
-                "email": "test125@example.com",
-                "password": "123",
-                "name": "Test",
-                "username": "testuser125",
-                "age": 25,
-                "gender": "male",
-                "language": "tr"
-            }
-            response = requests.post(f"{API_BASE}/auth/register", 
-                                   json=short_password_data)
-            if response.status_code == 400:
-                error_text = response.text
-                if "6 karakter" in error_text:
-                    self.log_test("Registration (short password)", True, 
-                                f"Turkish error for short password: {error_text}")
-                else:
-                    self.log_test("Registration (short password)", False, 
-                                f"Expected Turkish error for short password, got: {error_text}")
-            else:
-                self.log_test("Registration (short password)", False, 
-                            f"Expected 400 error, got HTTP {response.status_code}: {response.text}")
-        except Exception as e:
-            self.log_test("Registration (short password)", False, f"Exception: {e}")
-
-    def test_forgot_password(self):
-        """Test forgot password endpoint"""
-        print("\n=== Testing Forgot Password ===")
-        
-        try:
-            forgot_data = {"email": "test@test.com"}
-            response = requests.post(f"{API_BASE}/auth/forgot-password", 
-                                   json=forgot_data)
+            response = requests.get(f"{API_BASE}/career-path/random-player", 
+                                  params={"difficulty": "hard"})
             if response.status_code == 200:
                 data = response.json()
-                if "gönderildi" in data.get("message", ""):
-                    self.log_test("Forgot Password", True, 
-                                f"Turkish success message: {data}")
+                if 'name' in data:
+                    self.log_test("Random Player (hard)", True, 
+                                f"Hard player: {data.get('name')}")
                 else:
-                    self.log_test("Forgot Password", False, 
-                                f"Expected Turkish success message, got: {data}")
+                    self.log_test("Random Player (hard)", False, 
+                                f"Invalid response structure: {data}")
             else:
-                self.log_test("Forgot Password", False, 
+                self.log_test("Random Player (hard)", False, 
                             f"HTTP {response.status_code}: {response.text}")
         except Exception as e:
-            self.log_test("Forgot Password", False, f"Exception: {e}")
+            self.log_test("Random Player (hard)", False, f"Exception: {e}")
 
-    def test_user_login(self):
-        """Test user login endpoint"""
-        print("\n=== Testing User Login ===")
+    def test_players_list_endpoint(self):
+        """Test GET /api/career-path/players endpoint"""
+        print("\n=== Testing Career Path Players List ===")
         
-        # Test 1: Try login with our registered user
         try:
-            login_data = {
-                "email": self.test_user_email,
-                "password": self.test_user_password
-            }
-            response = requests.post(f"{API_BASE}/auth/login", 
-                                   json=login_data)
+            response = requests.get(f"{API_BASE}/career-path/players")
             if response.status_code == 200:
                 data = response.json()
-                if "user_id" in data and "session_token" in data:
-                    self.session_token = data["session_token"]
-                    self.log_test("User Login (valid)", True, 
-                                f"Login successful, got session token")
-                else:
-                    self.log_test("User Login (valid)", False, 
-                                f"Missing user_id or session_token: {data}")
-            else:
-                self.log_test("User Login (valid)", False, 
-                            f"HTTP {response.status_code}: {response.text}")
-        except Exception as e:
-            self.log_test("User Login (valid)", False, f"Exception: {e}")
-
-        # Test 2: Wrong password
-        try:
-            wrong_login_data = {
-                "email": self.test_user_email,
-                "password": "wrongpassword"
-            }
-            response = requests.post(f"{API_BASE}/auth/login", 
-                                   json=wrong_login_data)
-            if response.status_code == 401:
-                self.log_test("User Login (wrong password)", True, 
-                            f"401 Unauthorized as expected: {response.text}")
-            else:
-                self.log_test("User Login (wrong password)", False, 
-                            f"Expected 401, got HTTP {response.status_code}: {response.text}")
-        except Exception as e:
-            self.log_test("User Login (wrong password)", False, f"Exception: {e}")
-
-    def test_get_current_user(self):
-        """Test get current user endpoint"""
-        print("\n=== Testing Get Current User ===")
-        
-        # Test 1: With valid Bearer token
-        if self.session_token:
-            try:
-                headers = {"Authorization": f"Bearer {self.session_token}"}
-                response = requests.get(f"{API_BASE}/auth/me", headers=headers)
-                if response.status_code == 200:
-                    data = response.json()
-                    if "user_id" in data and "email" in data:
-                        self.log_test("Get Current User (with token)", True, 
-                                    f"User data retrieved: {data.get('email')}")
+                
+                # Check if it's a list
+                if isinstance(data, list):
+                    if len(data) > 0:
+                        # Check first player structure
+                        first_player = data[0]
+                        if 'name' in first_player:
+                            self.log_test("Players List", True, 
+                                        f"Got {len(data)} players. First: {first_player.get('name')}")
+                            
+                            # Check for some expected players
+                            player_names = [p['name'] for p in data]
+                            expected_players = ['Jude Bellingham', 'Kylian Mbappé', 'Erling Haaland', 'Lamine Yamal']
+                            found_players = [name for name in expected_players if name in player_names]
+                            
+                            if len(found_players) > 0:
+                                self.log_test("Players List (content)", True, 
+                                            f"Found expected players: {found_players}")
+                            else:
+                                self.log_test("Players List (content)", False, 
+                                            f"Expected players not found. Available: {player_names[:5]}...")
+                        else:
+                            self.log_test("Players List", False, 
+                                        f"Player missing 'name' field. Structure: {list(first_player.keys())}")
                     else:
-                        self.log_test("Get Current User (with token)", False, 
-                                    f"Missing user fields: {data}")
+                        self.log_test("Players List", False, "Empty player list returned")
                 else:
-                    self.log_test("Get Current User (with token)", False, 
-                                f"HTTP {response.status_code}: {response.text}")
-            except Exception as e:
-                self.log_test("Get Current User (with token)", False, f"Exception: {e}")
-        else:
-            self.log_test("Get Current User (with token)", False, 
-                        "No session token available")
-
-        # Test 2: Without token
-        try:
-            response = requests.get(f"{API_BASE}/auth/me")
-            if response.status_code == 401:
-                self.log_test("Get Current User (no token)", True, 
-                            "401 Unauthorized as expected")
+                    self.log_test("Players List", False, 
+                                f"Expected list, got {type(data)}: {data}")
             else:
-                self.log_test("Get Current User (no token)", False, 
-                            f"Expected 401, got HTTP {response.status_code}: {response.text}")
-        except Exception as e:
-            self.log_test("Get Current User (no token)", False, f"Exception: {e}")
-
-    def test_user_logout(self):
-        """Test user logout endpoint"""
-        print("\n=== Testing User Logout ===")
-        
-        if self.session_token:
-            try:
-                headers = {"Authorization": f"Bearer {self.session_token}"}
-                response = requests.post(f"{API_BASE}/auth/logout", headers=headers)
-                if response.status_code == 200:
-                    data = response.json()
-                    if "Logged out" in data.get("message", ""):
-                        self.log_test("User Logout", True, 
-                                    f"Logout successful: {data}")
-                    else:
-                        self.log_test("User Logout", False, 
-                                    f"Unexpected response: {data}")
-                else:
-                    self.log_test("User Logout", False, 
-                                f"HTTP {response.status_code}: {response.text}")
-            except Exception as e:
-                self.log_test("User Logout", False, f"Exception: {e}")
-        else:
-            self.log_test("User Logout", False, "No session token available")
-
-    def test_check_used_username(self):
-        """Test checking username that's already taken"""
-        print("\n=== Testing Used Username Check ===")
-        
-        # Check the username we just registered
-        try:
-            response = requests.get(f"{API_BASE}/auth/check-username", 
-                                  params={"username": "johndoe123"})
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("available") == False and "alınmış" in data.get("error", ""):
-                    self.log_test("Username Check (used)", True, 
-                                f"Turkish error for taken username: {data}")
-                else:
-                    self.log_test("Username Check (used)", False, 
-                                f"Expected available=false with Turkish error, got: {data}")
-            else:
-                self.log_test("Username Check (used)", False, 
+                self.log_test("Players List", False, 
                             f"HTTP {response.status_code}: {response.text}")
         except Exception as e:
-            self.log_test("Username Check (used)", False, f"Exception: {e}")
+            self.log_test("Players List", False, f"Exception: {e}")
+
+    def test_check_guess_endpoint(self):
+        """Test POST /api/career-path/check-guess endpoint"""
+        print("\n=== Testing Career Path Check Guess ===")
+        
+        # Test 1: Correct guess
+        try:
+            response = requests.post(f"{API_BASE}/career-path/check-guess", 
+                                   params={
+                                       "player_name": "Jude Bellingham",
+                                       "guess": "Jude Bellingham"
+                                   })
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('correct') == True:
+                    self.log_test("Check Guess (correct)", True, 
+                                f"Correct guess recognized: {data}")
+                else:
+                    self.log_test("Check Guess (correct)", False, 
+                                f"Expected correct=true, got: {data}")
+            else:
+                self.log_test("Check Guess (correct)", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("Check Guess (correct)", False, f"Exception: {e}")
+
+        # Test 2: Wrong guess with hints
+        try:
+            response = requests.post(f"{API_BASE}/career-path/check-guess", 
+                                   params={
+                                       "player_name": "Jude Bellingham",
+                                       "guess": "Kylian Mbappé"
+                                   })
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('correct') == False and 'hints' in data:
+                    self.log_test("Check Guess (wrong with hints)", True, 
+                                f"Wrong guess with hints: {data.get('hints')}")
+                else:
+                    self.log_test("Check Guess (wrong with hints)", False, 
+                                f"Expected correct=false with hints, got: {data}")
+            else:
+                self.log_test("Check Guess (wrong with hints)", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("Check Guess (wrong with hints)", False, f"Exception: {e}")
+
+        # Test 3: Player not found
+        try:
+            response = requests.post(f"{API_BASE}/career-path/check-guess", 
+                                   params={
+                                       "player_name": "NonExistent Player",
+                                       "guess": "Someone Else"
+                                   })
+            if response.status_code == 404:
+                self.log_test("Check Guess (player not found)", True, 
+                            f"404 error for non-existent player as expected")
+            else:
+                self.log_test("Check Guess (player not found)", False, 
+                            f"Expected 404, got HTTP {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("Check Guess (player not found)", False, f"Exception: {e}")
+
+    def test_response_structure(self):
+        """Test that responses have proper structure for the game"""
+        print("\n=== Testing Response Structure ===")
+        
+        # Get a random player and validate structure thoroughly
+        try:
+            response = requests.get(f"{API_BASE}/career-path/random-player")
+            if response.status_code == 200:
+                player = response.json()
+                
+                # Check required fields for game
+                required_fields = {
+                    'name': str,
+                    'team_history': list,
+                    'nationality': str,
+                    'position': str,
+                    'age': int
+                }
+                
+                structure_valid = True
+                issues = []
+                
+                for field, expected_type in required_fields.items():
+                    if field not in player:
+                        issues.append(f"Missing field: {field}")
+                        structure_valid = False
+                    elif not isinstance(player[field], expected_type):
+                        issues.append(f"Wrong type for {field}: expected {expected_type.__name__}, got {type(player[field]).__name__}")
+                        structure_valid = False
+                
+                # Check team_history structure
+                if 'team_history' in player and isinstance(player['team_history'], list):
+                    if len(player['team_history']) > 0:
+                        first_team = player['team_history'][0]
+                        if not isinstance(first_team, dict) or 'team' not in first_team:
+                            issues.append("team_history items should be dict with 'team' field")
+                            structure_valid = False
+                
+                if structure_valid:
+                    self.log_test("Response Structure", True, 
+                                f"All required fields present with correct types")
+                else:
+                    self.log_test("Response Structure", False, 
+                                f"Structure issues: {', '.join(issues)}")
+            else:
+                self.log_test("Response Structure", False, 
+                            f"Could not get player data: HTTP {response.status_code}")
+        except Exception as e:
+            self.log_test("Response Structure", False, f"Exception: {e}")
 
     def run_all_tests(self):
-        """Run all authentication tests"""
-        print(f"🚀 Starting Football Challenge Authentication API Tests")
+        """Run all Career Path API tests"""
+        print(f"🚀 Starting Career Path Game API Tests")
         print(f"📡 Backend URL: {BACKEND_URL}")
         print(f"🔗 API Base: {API_BASE}")
         
         # Run tests in logical order
-        self.test_check_username_availability()
-        self.test_user_registration()
-        self.test_check_used_username()
-        self.test_forgot_password()
-        self.test_user_login()
-        self.test_get_current_user()
-        self.test_user_logout()
+        self.test_random_player_endpoint()
+        self.test_players_list_endpoint()
+        self.test_check_guess_endpoint()
+        self.test_response_structure()
         
         # Summary
         print("\n" + "="*60)
-        print("🏁 TEST SUMMARY")
+        print("🏁 CAREER PATH API TEST SUMMARY")
         print("="*60)
         
         passed = sum(1 for r in self.results if r["success"])
@@ -332,13 +284,13 @@ class AuthAPITester:
         print(f"\n📊 Results: {passed}/{total} tests passed")
         
         if passed == total:
-            print("🎉 All authentication tests PASSED!")
+            print("🎉 All Career Path API tests PASSED!")
             return True
         else:
             print("⚠️  Some tests FAILED - see details above")
             return False
 
 if __name__ == "__main__":
-    tester = AuthAPITester()
+    tester = CareerPathAPITester()
     success = tester.run_all_tests()
     sys.exit(0 if success else 1)
