@@ -31,7 +31,8 @@ const SOUND_URLS = {
   error: 'https://assets.mixkit.co/active_storage/sfx/2955/2955-preview.mp3',
   goal: 'https://assets.mixkit.co/active_storage/sfx/2018/2018-preview.mp3',
   whistle: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
-  background: 'https://assets.mixkit.co/active_storage/sfx/209/209-preview.mp3',
+  // Stadium crowd atmosphere - royalty free
+  background: 'https://assets.mixkit.co/active_storage/sfx/136/136-preview.mp3',
 };
 
 export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
