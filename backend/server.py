@@ -617,10 +617,78 @@ async def get_global_leaderboard(limit: int = 100):
     """Get global leaderboard"""
     users = await db.users.find(
         {},
-        {"_id": 0, "user_id": 1, "username": 1, "avatar": 1, "stats": 1, "location": 1}
+        {"_id": 0, "user_id": 1, "username": 1, "name": 1, "avatar": 1, "stats": 1, "location": 1}
     ).sort("stats.points", -1).limit(limit).to_list(limit)
     
+    for i, user in enumerate(users):
+        user['rank_position'] = i + 1
+    
     return users
+
+@api_router.get("/leaderboard/daily")
+async def get_daily_leaderboard(limit: int = 100):
+    """Get daily leaderboard"""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    # Günlük skor tablosu
+    daily_scores = await db.daily_scores.find(
+        {"date": today},
+        {"_id": 0}
+    ).sort("points", -1).limit(limit).to_list(limit)
+    
+    # Kullanıcı bilgilerini ekle
+    for i, score in enumerate(daily_scores):
+        user = await db.users.find_one(
+            {"user_id": score.get("user_id")},
+            {"_id": 0, "username": 1, "name": 1, "avatar": 1}
+        )
+        if user:
+            score.update(user)
+        score['rank_position'] = i + 1
+    
+    return daily_scores
+
+@api_router.get("/leaderboard/weekly")
+async def get_weekly_leaderboard(limit: int = 100):
+    """Get weekly leaderboard"""
+    from datetime import timedelta
+    week_start = (datetime.now(timezone.utc) - timedelta(days=datetime.now(timezone.utc).weekday())).strftime("%Y-%m-%d")
+    
+    weekly_scores = await db.weekly_scores.find(
+        {"week_start": week_start},
+        {"_id": 0}
+    ).sort("points", -1).limit(limit).to_list(limit)
+    
+    for i, score in enumerate(weekly_scores):
+        user = await db.users.find_one(
+            {"user_id": score.get("user_id")},
+            {"_id": 0, "username": 1, "name": 1, "avatar": 1}
+        )
+        if user:
+            score.update(user)
+        score['rank_position'] = i + 1
+    
+    return weekly_scores
+
+@api_router.get("/leaderboard/friends")
+async def get_friends_leaderboard(request: Request):
+    """Get friends leaderboard"""
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    friend_ids = user.get("friends", []) + [user["user_id"]]
+    
+    friends = await db.users.find(
+        {"user_id": {"$in": friend_ids}},
+        {"_id": 0, "user_id": 1, "username": 1, "name": 1, "avatar": 1, "stats": 1}
+    ).sort("stats.points", -1).to_list(100)
+    
+    for i, friend in enumerate(friends):
+        friend['rank_position'] = i + 1
+        friend['is_me'] = friend['user_id'] == user['user_id']
+    
+    return friends
 
 @api_router.get("/leaderboard/location")
 async def get_location_leaderboard(location: str, limit: int = 100):
@@ -630,7 +698,227 @@ async def get_location_leaderboard(location: str, limit: int = 100):
         {"_id": 0, "user_id": 1, "username": 1, "avatar": 1, "stats": 1}
     ).sort("stats.points", -1).limit(limit).to_list(limit)
     
+    for i, user in enumerate(users):
+        user['rank_position'] = i + 1
+    
     return users
+
+# ============ DAILY TASKS ============
+
+DAILY_TASKS_TEMPLATE = [
+    {"task_id": "play_3_games", "description": "3 oyun oyna", "target": 3, "reward_coins": 50, "reward_xp": 30},
+    {"task_id": "win_2_games", "description": "2 oyun kazan", "target": 2, "reward_coins": 80, "reward_xp": 50},
+    {"task_id": "correct_10", "description": "10 doğru cevap ver", "target": 10, "reward_coins": 40, "reward_xp": 25},
+    {"task_id": "use_joker", "description": "1 joker kullan", "target": 1, "reward_coins": 20, "reward_xp": 15},
+    {"task_id": "play_friend", "description": "Arkadaşınla 1 oyun oyna", "target": 1, "reward_coins": 60, "reward_xp": 40},
+]
+
+@api_router.get("/daily-tasks")
+async def get_daily_tasks(request: Request):
+    """Get user's daily tasks"""
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    # Bugünün görevlerini kontrol et
+    user_tasks = await db.daily_tasks.find_one({
+        "user_id": user["user_id"],
+        "date": today
+    })
+    
+    if not user_tasks:
+        # Yeni günlük görevler oluştur
+        import random
+        selected_tasks = random.sample(DAILY_TASKS_TEMPLATE, min(3, len(DAILY_TASKS_TEMPLATE)))
+        tasks = []
+        for task in selected_tasks:
+            tasks.append({
+                **task,
+                "current": 0,
+                "completed": False,
+                "claimed": False
+            })
+        
+        user_tasks = {
+            "user_id": user["user_id"],
+            "date": today,
+            "tasks": tasks
+        }
+        await db.daily_tasks.insert_one(user_tasks)
+    
+    return user_tasks.get("tasks", [])
+
+@api_router.post("/daily-tasks/{task_id}/claim")
+async def claim_daily_task_reward(task_id: str, request: Request):
+    """Claim reward for completed daily task"""
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    user_tasks = await db.daily_tasks.find_one({
+        "user_id": user["user_id"],
+        "date": today
+    })
+    
+    if not user_tasks:
+        raise HTTPException(status_code=404, detail="Görevler bulunamadı")
+    
+    task = next((t for t in user_tasks["tasks"] if t["task_id"] == task_id), None)
+    if not task:
+        raise HTTPException(status_code=404, detail="Görev bulunamadı")
+    
+    if not task["completed"]:
+        raise HTTPException(status_code=400, detail="Görev henüz tamamlanmadı")
+    
+    if task["claimed"]:
+        raise HTTPException(status_code=400, detail="Ödül zaten alındı")
+    
+    # Ödülü ver
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$inc": {
+            "coins": task["reward_coins"],
+            "stats.xp": task["reward_xp"]
+        }}
+    )
+    
+    # Görevi claimed olarak işaretle
+    await db.daily_tasks.update_one(
+        {"user_id": user["user_id"], "date": today, "tasks.task_id": task_id},
+        {"$set": {"tasks.$.claimed": True}}
+    )
+    
+    return {"message": "Ödül alındı!", "coins": task["reward_coins"], "xp": task["reward_xp"]}
+
+@api_router.post("/daily-login")
+async def daily_login_reward(request: Request):
+    """Claim daily login reward"""
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    last_login = user.get("last_login_date")
+    current_streak = user.get("daily_login_streak", 0)
+    
+    if last_login == today:
+        return {"message": "Bugün zaten giriş yaptınız", "streak": current_streak, "already_claimed": True}
+    
+    # Streak kontrolü
+    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+    if last_login == yesterday:
+        new_streak = current_streak + 1
+    else:
+        new_streak = 1
+    
+    # Streak bonusu
+    base_reward = 10
+    streak_bonus = min(new_streak * 5, 50)  # Max 50 bonus
+    total_coins = base_reward + streak_bonus
+    
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {
+            "$set": {
+                "last_login_date": today,
+                "daily_login_streak": new_streak
+            },
+            "$inc": {"coins": total_coins}
+        }
+    )
+    
+    return {
+        "message": "Günlük giriş ödülü!",
+        "streak": new_streak,
+        "coins_earned": total_coins,
+        "streak_bonus": streak_bonus
+    }
+
+# ============ JOKER SHOP ============
+
+@api_router.get("/shop/jokers")
+async def get_joker_shop():
+    """Get joker shop items"""
+    return [
+        {"id": "time_extend", "name": "+5 Saniye", "price_coins": 50, "description": "Süreye 5 saniye ekle"},
+        {"id": "eliminate_two", "name": "2 Şık Sil", "price_coins": 75, "description": "2 yanlış şıkkı sil"},
+        {"id": "reveal_letter", "name": "Harf Aç", "price_coins": 60, "description": "Bir harf göster"},
+        {"id": "skip_question", "name": "Soru Geç", "price_coins": 100, "description": "Soruyu atla"},
+    ]
+
+@api_router.post("/shop/buy-joker/{joker_id}")
+async def buy_joker(joker_id: str, request: Request):
+    """Buy a joker from shop"""
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    prices = {
+        "time_extend": 50,
+        "eliminate_two": 75,
+        "reveal_letter": 60,
+        "skip_question": 100
+    }
+    
+    if joker_id not in prices:
+        raise HTTPException(status_code=404, detail="Joker bulunamadı")
+    
+    price = prices[joker_id]
+    
+    if user.get("coins", 0) < price:
+        raise HTTPException(status_code=400, detail="Yetersiz coin")
+    
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {
+            "$inc": {
+                "coins": -price,
+                f"jokers.{joker_id}": 1
+            }
+        }
+    )
+    
+    return {"message": "Joker satın alındı!", "joker": joker_id}
+
+# ============ USER STATS ============
+
+@api_router.get("/user/stats")
+async def get_user_stats(request: Request):
+    """Get detailed user statistics"""
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    stats = user.get("stats", {})
+    
+    # Lig bilgisi
+    points = stats.get("points", 0)
+    current_league = stats.get("rank", "Bronze")
+    
+    # Sonraki lig için gerekli puan
+    league_order = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Legend"]
+    current_idx = league_order.index(current_league) if current_league in league_order else 0
+    
+    next_league = league_order[current_idx + 1] if current_idx < len(league_order) - 1 else None
+    points_for_next = None
+    if next_league:
+        league_thresholds = {"Silver": 1000, "Gold": 2500, "Platinum": 5000, "Diamond": 10000, "Legend": 20000}
+        points_for_next = league_thresholds.get(next_league, 0) - points
+    
+    return {
+        "stats": stats,
+        "coins": user.get("coins", 0),
+        "gems": user.get("gems", 0),
+        "jokers": user.get("jokers", {}),
+        "current_league": current_league,
+        "next_league": next_league,
+        "points_for_next_league": points_for_next,
+        "daily_login_streak": user.get("daily_login_streak", 0)
+    }
 
 # ============ GAME STATS UPDATE ============
 
