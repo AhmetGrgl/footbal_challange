@@ -778,6 +778,154 @@ async def accept_friend_request(request_id: str, request: Request):
 # ============ SOCKET.IO HANDLERS ============
 
 matchmaking_queue = {}
+active_games = {}  # room_id -> GameRoom data
+private_rooms = {}  # room_code -> room_id
+
+# Lig sistemleri
+LEAGUES = {
+    "Bronze": {"min_points": 0, "max_points": 999, "icon": "🥉"},
+    "Silver": {"min_points": 1000, "max_points": 2499, "icon": "🥈"},
+    "Gold": {"min_points": 2500, "max_points": 4999, "icon": "🥇"},
+    "Platinum": {"min_points": 5000, "max_points": 9999, "icon": "💎"},
+    "Diamond": {"min_points": 10000, "max_points": 19999, "icon": "💠"},
+    "Legend": {"min_points": 20000, "max_points": float('inf'), "icon": "🏆"}
+}
+
+def get_league_from_points(points: int) -> str:
+    for league, data in LEAGUES.items():
+        if data["min_points"] <= points <= data["max_points"]:
+            return league
+    return "Bronze"
+
+def calculate_xp_for_level(level: int) -> int:
+    return level * 100 + (level - 1) * 50
+
+async def generate_questions(game_mode: str, count: int = 10) -> List[dict]:
+    """Generate questions based on game mode"""
+    questions = []
+    
+    # Oyuncu havuzunu al
+    players = await db.players.find({}).to_list(500)
+    
+    if game_mode == "mystery-player":
+        # Gizli Oyuncu modu - ipuçları ile tahmin
+        import random
+        random.shuffle(players)
+        for player in players[:count]:
+            teams = player.get("team_history", [])
+            hints = []
+            if teams:
+                hints.append(f"Oynadığı takımlardan biri: {teams[0].get('team', 'Bilinmiyor')}")
+            if len(teams) > 1:
+                hints.append(f"Başka bir takım: {teams[1].get('team', 'Bilinmiyor')}")
+            
+            # Yanlış şıklar için diğer oyuncuları seç
+            wrong_answers = random.sample([p["name"] for p in players if p["name"] != player["name"]], 3)
+            options = wrong_answers + [player["name"]]
+            random.shuffle(options)
+            
+            questions.append({
+                "question_id": f"q_{uuid.uuid4().hex[:8]}",
+                "type": "mystery-player",
+                "hints": hints,
+                "correct_answer": player["name"],
+                "options": options,
+                "player_data": player
+            })
+    
+    elif game_mode == "value-guess":
+        # Değer Tahmini modu
+        import random
+        random.shuffle(players)
+        for player in players[:count]:
+            market_values = player.get("market_values", [])
+            if market_values:
+                value = market_values[-1].get("value", "10M €")
+            else:
+                value = "10M €"
+            
+            # Değer seçenekleri oluştur
+            base_value = 10  # Milyon
+            options = [f"{base_value}M €", f"{base_value*2}M €", f"{base_value*5}M €", f"{base_value*10}M €"]
+            if value not in options:
+                options[0] = value
+            random.shuffle(options)
+            
+            questions.append({
+                "question_id": f"q_{uuid.uuid4().hex[:8]}",
+                "type": "value-guess",
+                "player_name": player["name"],
+                "correct_answer": value,
+                "options": options
+            })
+    
+    elif game_mode == "career-path":
+        # Kariyer Yolu - hangi takımlarda oynadı
+        import random
+        random.shuffle(players)
+        for player in players[:count]:
+            teams = player.get("team_history", [])
+            if len(teams) >= 2:
+                correct_teams = [t.get("team", "") for t in teams[:3]]
+                all_teams = list(set([t.get("team", "") for p in players for t in p.get("team_history", [])]))
+                wrong_teams = random.sample([t for t in all_teams if t not in correct_teams], 3)
+                
+                options = wrong_teams + [correct_teams[0]]
+                random.shuffle(options)
+                
+                questions.append({
+                    "question_id": f"q_{uuid.uuid4().hex[:8]}",
+                    "type": "career-path",
+                    "player_name": player["name"],
+                    "question": f"{player['name']} hangi takımda oynadı?",
+                    "correct_answer": correct_teams[0],
+                    "options": options
+                })
+    
+    elif game_mode == "letter-hunt":
+        # Harf Avı - harflerden oyuncu bul
+        import random
+        random.shuffle(players)
+        for player in players[:count]:
+            name = player["name"]
+            hidden_name = ""
+            revealed_indices = random.sample(range(len(name)), min(3, len(name)))
+            for i, char in enumerate(name):
+                if i in revealed_indices or char == " ":
+                    hidden_name += char
+                else:
+                    hidden_name += "_"
+            
+            wrong_answers = random.sample([p["name"] for p in players if p["name"] != name], 3)
+            options = wrong_answers + [name]
+            random.shuffle(options)
+            
+            questions.append({
+                "question_id": f"q_{uuid.uuid4().hex[:8]}",
+                "type": "letter-hunt",
+                "hidden_name": hidden_name,
+                "correct_answer": name,
+                "options": options
+            })
+    
+    else:
+        # Varsayılan mod
+        import random
+        random.shuffle(players)
+        for player in players[:count]:
+            wrong_answers = random.sample([p["name"] for p in players if p["name"] != player["name"]], 3)
+            options = wrong_answers + [player["name"]]
+            random.shuffle(options)
+            
+            questions.append({
+                "question_id": f"q_{uuid.uuid4().hex[:8]}",
+                "type": "general",
+                "question": f"Bu oyuncunun adı nedir?",
+                "correct_answer": player["name"],
+                "options": options
+            })
+    
+    return questions
 
 @sio.event
 async def connect(sid, environ):
@@ -787,15 +935,29 @@ async def connect(sid, environ):
 @sio.event
 async def disconnect(sid):
     logger.info(f"Client disconnected: {sid}")
+    # Remove from matchmaking
     for mode in matchmaking_queue:
-        if sid in matchmaking_queue[mode]:
-            matchmaking_queue[mode].remove(sid)
+        matchmaking_queue[mode] = [p for p in matchmaking_queue[mode] if p['sid'] != sid]
+    
+    # Handle disconnection in active games
+    for room_id, game in list(active_games.items()):
+        for player in game.get('players', []):
+            if player.get('sid') == sid:
+                # Oyuncu disconnected - rakibe bildir
+                await sio.emit('opponent_disconnected', {
+                    'room_id': room_id,
+                    'wait_time': 30  # 30 saniye bekle
+                }, room=room_id)
+                player['disconnected'] = True
+                player['disconnect_time'] = datetime.now(timezone.utc)
+                break
 
 @sio.event
 async def join_matchmaking(sid, data):
-    """Join matchmaking queue"""
+    """Join matchmaking queue for quick match"""
     game_mode = data.get('game_mode')
     user_id = data.get('user_id')
+    username = data.get('username', 'Player')
     
     if not game_mode or not user_id:
         await sio.emit('error', {'message': 'Invalid data'}, to=sid)
@@ -806,29 +968,73 @@ async def join_matchmaking(sid, data):
     if game_mode not in matchmaking_queue:
         matchmaking_queue[game_mode] = []
     
-    matchmaking_queue[game_mode].append({'sid': sid, 'user_id': user_id})
+    # Check if already in queue
+    for p in matchmaking_queue[game_mode]:
+        if p['user_id'] == user_id:
+            await sio.emit('already_in_queue', {}, to=sid)
+            return
     
+    matchmaking_queue[game_mode].append({
+        'sid': sid, 
+        'user_id': user_id,
+        'username': username,
+        'joined_at': datetime.now(timezone.utc)
+    })
+    
+    # Eşleşme var mı kontrol et
     if len(matchmaking_queue[game_mode]) >= 2:
         player1 = matchmaking_queue[game_mode].pop(0)
         player2 = matchmaking_queue[game_mode].pop(0)
         
         room_id = f"game_{uuid.uuid4().hex[:12]}"
+        
+        # Soruları oluştur
+        questions = await generate_questions(game_mode, 10)
+        
+        # Oyun odasını oluştur
+        active_games[room_id] = {
+            'room_id': room_id,
+            'game_mode': game_mode,
+            'players': [
+                {'sid': player1['sid'], 'user_id': player1['user_id'], 'username': player1['username'], 'score': 0, 'combo': 0},
+                {'sid': player2['sid'], 'user_id': player2['user_id'], 'username': player2['username'], 'score': 0, 'combo': 0}
+            ],
+            'questions': questions,
+            'current_question': 0,
+            'status': 'starting',
+            'created_at': datetime.now(timezone.utc),
+            'round_answers': {}
+        }
+        
         await sio.enter_room(player1['sid'], room_id)
         await sio.enter_room(player2['sid'], room_id)
         
+        # Her iki oyuncuya da eşleşme bilgisi gönder
         await sio.emit('match_found', {
             'room_id': room_id,
-            'opponent': player2['user_id']
+            'opponent': {'user_id': player2['user_id'], 'username': player2['username']},
+            'game_mode': game_mode,
+            'total_questions': len(questions)
         }, to=player1['sid'])
         
         await sio.emit('match_found', {
             'room_id': room_id,
-            'opponent': player1['user_id']
+            'opponent': {'user_id': player1['user_id'], 'username': player1['username']},
+            'game_mode': game_mode,
+            'total_questions': len(questions)
         }, to=player2['sid'])
         
-        logger.info(f"Match created: {room_id}")
+        logger.info(f"Match created: {room_id} between {player1['username']} and {player2['username']}")
+        
+        # 3 saniye sonra oyunu başlat
+        import asyncio
+        await asyncio.sleep(3)
+        await start_game_round(room_id)
     else:
-        await sio.emit('searching', {'position': len(matchmaking_queue[game_mode])}, to=sid)
+        await sio.emit('searching', {
+            'position': len(matchmaking_queue[game_mode]),
+            'estimated_wait': '~30 saniye'
+        }, to=sid)
 
 @sio.event
 async def leave_matchmaking(sid, data):
@@ -839,6 +1045,390 @@ async def leave_matchmaking(sid, data):
             p for p in matchmaking_queue[game_mode] if p['sid'] != sid
         ]
     await sio.emit('left_queue', {}, to=sid)
+
+@sio.event
+async def create_private_room(sid, data):
+    """Create a private room for friend match"""
+    user_id = data.get('user_id')
+    username = data.get('username', 'Player')
+    game_mode = data.get('game_mode')
+    
+    import random
+    import string
+    room_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    room_id = f"private_{uuid.uuid4().hex[:12]}"
+    
+    private_rooms[room_code] = {
+        'room_id': room_id,
+        'host': {'sid': sid, 'user_id': user_id, 'username': username},
+        'game_mode': game_mode,
+        'created_at': datetime.now(timezone.utc)
+    }
+    
+    await sio.enter_room(sid, room_id)
+    
+    await sio.emit('room_created', {
+        'room_code': room_code,
+        'room_id': room_id
+    }, to=sid)
+
+@sio.event
+async def join_private_room(sid, data):
+    """Join a private room with code"""
+    room_code = data.get('room_code', '').upper()
+    user_id = data.get('user_id')
+    username = data.get('username', 'Player')
+    
+    if room_code not in private_rooms:
+        await sio.emit('error', {'message': 'Oda bulunamadı'}, to=sid)
+        return
+    
+    room_data = private_rooms[room_code]
+    room_id = room_data['room_id']
+    host = room_data['host']
+    game_mode = room_data['game_mode']
+    
+    # Soruları oluştur
+    questions = await generate_questions(game_mode, 10)
+    
+    # Oyun odasını oluştur
+    active_games[room_id] = {
+        'room_id': room_id,
+        'game_mode': game_mode,
+        'players': [
+            {'sid': host['sid'], 'user_id': host['user_id'], 'username': host['username'], 'score': 0, 'combo': 0},
+            {'sid': sid, 'user_id': user_id, 'username': username, 'score': 0, 'combo': 0}
+        ],
+        'questions': questions,
+        'current_question': 0,
+        'status': 'starting',
+        'created_at': datetime.now(timezone.utc),
+        'round_answers': {}
+    }
+    
+    await sio.enter_room(sid, room_id)
+    
+    # Her iki oyuncuya da bilgi gönder
+    await sio.emit('match_found', {
+        'room_id': room_id,
+        'opponent': {'user_id': user_id, 'username': username},
+        'game_mode': game_mode,
+        'total_questions': len(questions)
+    }, to=host['sid'])
+    
+    await sio.emit('match_found', {
+        'room_id': room_id,
+        'opponent': {'user_id': host['user_id'], 'username': host['username']},
+        'game_mode': game_mode,
+        'total_questions': len(questions)
+    }, to=sid)
+    
+    # Oda kodunu sil
+    del private_rooms[room_code]
+    
+    # 3 saniye sonra oyunu başlat
+    import asyncio
+    await asyncio.sleep(3)
+    await start_game_round(room_id)
+
+async def start_game_round(room_id: str):
+    """Start a new round/question"""
+    if room_id not in active_games:
+        return
+    
+    game = active_games[room_id]
+    
+    if game['current_question'] >= len(game['questions']):
+        # Oyun bitti
+        await end_game(room_id)
+        return
+    
+    question = game['questions'][game['current_question']]
+    game['status'] = 'playing'
+    game['question_start_time'] = datetime.now(timezone.utc)
+    game['round_answers'] = {}
+    
+    # Soruyu gönder (cevabı gizle)
+    question_data = {k: v for k, v in question.items() if k != 'correct_answer'}
+    question_data['question_number'] = game['current_question'] + 1
+    question_data['total_questions'] = len(game['questions'])
+    question_data['time_limit'] = 15  # 15 saniye
+    
+    await sio.emit('new_question', question_data, room=room_id)
+    
+    # 15 saniye sonra süre doldu kontrolü
+    import asyncio
+    await asyncio.sleep(15)
+    await check_round_timeout(room_id, game['current_question'])
+
+async def check_round_timeout(room_id: str, question_index: int):
+    """Check if round timed out and move to next question"""
+    if room_id not in active_games:
+        return
+    
+    game = active_games[room_id]
+    
+    # Hala aynı soruda mıyız?
+    if game['current_question'] != question_index:
+        return
+    
+    # Cevap vermeyenlere yanlış say
+    question = game['questions'][question_index]
+    for player in game['players']:
+        if player['user_id'] not in game['round_answers']:
+            game['round_answers'][player['user_id']] = {
+                'answer': None,
+                'time_taken': 15,
+                'correct': False
+            }
+            player['combo'] = 0  # Combo kırıldı
+    
+    # Sonuçları gönder
+    await send_round_results(room_id)
+
+@sio.event
+async def submit_answer(sid, data):
+    """Player submits an answer"""
+    room_id = data.get('room_id')
+    answer = data.get('answer')
+    user_id = data.get('user_id')
+    
+    if room_id not in active_games:
+        await sio.emit('error', {'message': 'Oyun bulunamadı'}, to=sid)
+        return
+    
+    game = active_games[room_id]
+    question = game['questions'][game['current_question']]
+    
+    # Süreyi hesapla
+    time_taken = (datetime.now(timezone.utc) - game['question_start_time']).total_seconds()
+    is_correct = answer == question['correct_answer']
+    
+    # Puanı hesapla
+    base_points = 100 if is_correct else 0
+    speed_bonus = max(0, int((15 - time_taken) * 10)) if is_correct else 0
+    
+    # Combo sistemi
+    player = next((p for p in game['players'] if p['user_id'] == user_id), None)
+    if player:
+        if is_correct:
+            player['combo'] += 1
+            combo_multiplier = min(player['combo'], 5)  # Max 5x combo
+        else:
+            player['combo'] = 0
+            combo_multiplier = 1
+        
+        total_points = (base_points + speed_bonus) * combo_multiplier
+        player['score'] += total_points
+        
+        game['round_answers'][user_id] = {
+            'answer': answer,
+            'time_taken': time_taken,
+            'correct': is_correct,
+            'points': total_points,
+            'combo': player['combo'],
+            'speed_bonus': speed_bonus
+        }
+    
+    # Tüm oyuncular cevap verdiyse
+    if len(game['round_answers']) >= len(game['players']):
+        await send_round_results(room_id)
+
+async def send_round_results(room_id: str):
+    """Send round results to all players"""
+    if room_id not in active_games:
+        return
+    
+    game = active_games[room_id]
+    question = game['questions'][game['current_question']]
+    
+    results = {
+        'correct_answer': question['correct_answer'],
+        'player_results': [],
+        'scores': {}
+    }
+    
+    for player in game['players']:
+        answer_data = game['round_answers'].get(player['user_id'], {})
+        results['player_results'].append({
+            'user_id': player['user_id'],
+            'username': player['username'],
+            'correct': answer_data.get('correct', False),
+            'time_taken': answer_data.get('time_taken', 15),
+            'points': answer_data.get('points', 0),
+            'combo': answer_data.get('combo', 0)
+        })
+        results['scores'][player['user_id']] = player['score']
+    
+    await sio.emit('round_results', results, room=room_id)
+    
+    # Sonraki soruya geç
+    game['current_question'] += 1
+    
+    import asyncio
+    await asyncio.sleep(3)  # 3 saniye sonuçları göster
+    await start_game_round(room_id)
+
+async def end_game(room_id: str):
+    """End the game and calculate final results"""
+    if room_id not in active_games:
+        return
+    
+    game = active_games[room_id]
+    game['status'] = 'finished'
+    
+    # Kazananı belirle
+    sorted_players = sorted(game['players'], key=lambda p: p['score'], reverse=True)
+    winner = sorted_players[0] if sorted_players[0]['score'] > sorted_players[1]['score'] else None
+    is_draw = sorted_players[0]['score'] == sorted_players[1]['score']
+    
+    # XP ve ödüller
+    winner_xp = 50
+    loser_xp = 20
+    winner_coins = 30
+    loser_coins = 10
+    
+    results = {
+        'game_over': True,
+        'is_draw': is_draw,
+        'winner': winner['user_id'] if winner else None,
+        'final_scores': {p['user_id']: p['score'] for p in game['players']},
+        'rewards': {}
+    }
+    
+    for player in game['players']:
+        is_winner = winner and player['user_id'] == winner['user_id']
+        xp_earned = winner_xp if is_winner else loser_xp
+        coins_earned = winner_coins if is_winner else loser_coins
+        
+        if is_draw:
+            xp_earned = 35
+            coins_earned = 20
+        
+        results['rewards'][player['user_id']] = {
+            'xp': xp_earned,
+            'coins': coins_earned,
+            'is_winner': is_winner
+        }
+        
+        # Veritabanını güncelle
+        update_data = {
+            "$inc": {
+                "stats.total_games": 1,
+                "stats.points": player['score'],
+                "stats.xp": xp_earned,
+                "coins": coins_earned
+            }
+        }
+        
+        if is_winner:
+            update_data["$inc"]["stats.wins"] = 1
+            update_data["$inc"]["stats.win_streak"] = 1
+        elif not is_draw:
+            update_data["$inc"]["stats.losses"] = 1
+            update_data["$set"] = {"stats.win_streak": 0}
+        
+        await db.users.update_one({"user_id": player['user_id']}, update_data)
+        
+        # Lig güncelle
+        user = await db.users.find_one({"user_id": player['user_id']})
+        if user:
+            new_points = user.get("stats", {}).get("points", 0)
+            new_league = get_league_from_points(new_points)
+            await db.users.update_one(
+                {"user_id": player['user_id']},
+                {"$set": {"stats.rank": new_league}}
+            )
+    
+    await sio.emit('game_over', results, room=room_id)
+    
+    # Odayı temizle
+    del active_games[room_id]
+
+@sio.event
+async def use_joker(sid, data):
+    """Use a joker during the game"""
+    room_id = data.get('room_id')
+    user_id = data.get('user_id')
+    joker_type = data.get('joker_type')
+    
+    if room_id not in active_games:
+        await sio.emit('error', {'message': 'Oyun bulunamadı'}, to=sid)
+        return
+    
+    # Joker kontrolü
+    user = await db.users.find_one({"user_id": user_id})
+    if not user or user.get("jokers", {}).get(joker_type, 0) <= 0:
+        await sio.emit('error', {'message': 'Joker yok'}, to=sid)
+        return
+    
+    # Jokeri kullan
+    await db.users.update_one(
+        {"user_id": user_id},
+        {"$inc": {f"jokers.{joker_type}": -1}}
+    )
+    
+    game = active_games[room_id]
+    question = game['questions'][game['current_question']]
+    
+    result = {'joker_type': joker_type, 'success': True}
+    
+    if joker_type == 'time_extend':
+        result['extra_time'] = 5
+    elif joker_type == 'eliminate_two':
+        # 2 yanlış şıkkı sil
+        import random
+        wrong_options = [o for o in question['options'] if o != question['correct_answer']]
+        eliminated = random.sample(wrong_options, min(2, len(wrong_options)))
+        result['eliminated_options'] = eliminated
+    elif joker_type == 'reveal_letter':
+        # Bir harf aç
+        correct = question['correct_answer']
+        hidden_indices = [i for i, c in enumerate(correct) if c != ' ']
+        if hidden_indices:
+            import random
+            reveal_idx = random.choice(hidden_indices)
+            result['revealed_letter'] = {'index': reveal_idx, 'letter': correct[reveal_idx]}
+    elif joker_type == 'skip_question':
+        # Soruyu geç
+        game['current_question'] += 1
+        result['skipped'] = True
+    
+    await sio.emit('joker_used', result, to=sid)
+
+@sio.event
+async def request_rematch(sid, data):
+    """Request a rematch after game ends"""
+    room_id = data.get('room_id')
+    user_id = data.get('user_id')
+    
+    await sio.emit('rematch_requested', {
+        'from_user': user_id
+    }, room=room_id)
+
+@sio.event  
+async def accept_rematch(sid, data):
+    """Accept rematch request"""
+    room_id = data.get('room_id')
+    game_mode = data.get('game_mode')
+    
+    # Yeni oyun başlat
+    # Bu basitleştirilmiş versiyon - gerçek implementasyonda eski oyuncuları alıp yeni oda oluşturmalı
+    await sio.emit('rematch_accepted', {
+        'message': 'Yeni oyun başlıyor...'
+    }, room=room_id)
+
+@sio.event
+async def send_emote(sid, data):
+    """Send emote to opponent"""
+    room_id = data.get('room_id')
+    emote = data.get('emote')
+    user_id = data.get('user_id')
+    
+    await sio.emit('emote_received', {
+        'from_user': user_id,
+        'emote': emote
+    }, room=room_id)
 
 # CORS middleware must be added BEFORE routes
 app.add_middleware(
