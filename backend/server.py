@@ -60,10 +60,49 @@ class User(BaseModel):
         "losses": 0, 
         "total_games": 0,
         "points": 0,
-        "rank": "Bronze"
+        "xp": 0,
+        "level": 1,
+        "rank": "Bronze",
+        "win_streak": 0,
+        "best_streak": 0
     })
     friends: List[str] = Field(default_factory=list)
     profile_completed: bool = False
+    # Joker sistemi
+    jokers: dict = Field(default_factory=lambda: {
+        "time_extend": 3,  # +5 saniye
+        "eliminate_two": 3,  # 2 şık sil
+        "reveal_letter": 3,  # Harf aç
+        "skip_question": 2   # Soru değiştir
+    })
+    # Ekonomi
+    coins: int = 100
+    gems: int = 10
+    # Günlük görevler
+    daily_tasks: dict = Field(default_factory=dict)
+    daily_login_streak: int = 0
+    last_login_date: Optional[str] = None
+
+class GameRoom(BaseModel):
+    room_id: str
+    game_mode: str
+    players: List[dict]
+    questions: List[dict] = []
+    current_question: int = 0
+    scores: dict = {}
+    status: str = "waiting"  # waiting, playing, finished
+    created_at: datetime
+    question_start_time: Optional[datetime] = None
+    round_answers: dict = {}  # Oyuncuların cevapları
+
+class DailyTask(BaseModel):
+    task_id: str
+    description: str
+    target: int
+    current: int = 0
+    reward_coins: int
+    reward_xp: int
+    completed: bool = False
 
 class SessionDataResponse(BaseModel):
     id: str
