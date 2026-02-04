@@ -258,8 +258,82 @@ export const api = {
     return response.json();
   },
 
+  async getDailyLeaderboard() {
+    const response = await fetch(`${BACKEND_URL}/api/leaderboard/daily`);
+    return response.json();
+  },
+
+  async getWeeklyLeaderboard() {
+    const response = await fetch(`${BACKEND_URL}/api/leaderboard/weekly`);
+    return response.json();
+  },
+
+  async getFriendsLeaderboard() {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const response = await fetch(`${BACKEND_URL}/api/leaderboard/friends`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.json();
+  },
+
   async getLocationLeaderboard(location: string) {
     const response = await fetch(`${BACKEND_URL}/api/leaderboard/location?location=${location}`);
+    return response.json();
+  },
+
+  // Daily Tasks
+  async getDailyTasks() {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const response = await fetch(`${BACKEND_URL}/api/daily-tasks`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) return [];
+    return response.json();
+  },
+
+  async claimTaskReward(taskId: string) {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const response = await fetch(`${BACKEND_URL}/api/daily-tasks/${taskId}/claim`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.json();
+  },
+
+  async claimDailyLogin() {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const response = await fetch(`${BACKEND_URL}/api/daily-login`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.json();
+  },
+
+  // Shop
+  async getJokerShop() {
+    const response = await fetch(`${BACKEND_URL}/api/shop/jokers`);
+    return response.json();
+  },
+
+  async buyJoker(jokerId: string) {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const response = await fetch(`${BACKEND_URL}/api/shop/buy-joker/${jokerId}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Satın alma başarısız');
+    }
+    return response.json();
+  },
+
+  // User Stats
+  async getUserStats() {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const response = await fetch(`${BACKEND_URL}/api/user/stats`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.json();
   },
 
