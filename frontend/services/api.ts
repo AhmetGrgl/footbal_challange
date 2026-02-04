@@ -337,5 +337,25 @@ export const api = {
     return response.json();
   },
 
+  // Career Path Game
+  async getCareerPathRandomPlayer(difficulty: string = 'all') {
+    const response = await fetch(`${BACKEND_URL}/api/career-path/random-player?difficulty=${difficulty}`);
+    if (!response.ok) throw new Error('Oyuncu yüklenemedi');
+    return response.json();
+  },
+
+  async getCareerPathPlayers() {
+    const response = await fetch(`${BACKEND_URL}/api/career-path/players`);
+    if (!response.ok) return [];
+    return response.json();
+  },
+
+  async checkCareerPathGuess(playerName: string, guess: string) {
+    const response = await fetch(`${BACKEND_URL}/api/career-path/check-guess?player_name=${encodeURIComponent(playerName)}&guess=${encodeURIComponent(guess)}`, {
+      method: 'POST',
+    });
+    return response.json();
+  },
+
   getToken: () => AsyncStorage.getItem(TOKEN_KEY),
 };
