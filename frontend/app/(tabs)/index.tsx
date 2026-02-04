@@ -400,15 +400,16 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
-  // Game Cards
-  gamesRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    gap: 8,
+  // Game Cards - Horizontal scroll
+  gamesScroll: {
+    marginHorizontal: -12,
+  },
+  gamesScrollContent: {
+    paddingHorizontal: 12,
+    gap: 12,
   },
   gameCardWrapper: {
-    flex: 1,
+    width: 120,
   },
   gameCard: {
     borderRadius: 20,
