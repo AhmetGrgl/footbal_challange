@@ -9,7 +9,6 @@ import {
   Animated,
   Easing,
   Dimensions,
-  Image,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSounds } from '../../contexts/SoundContext';
@@ -20,76 +19,77 @@ import * as Animatable from 'react-native-animatable';
 
 const HOME_BG = require('../../assets/images/home-bg.jpg');
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 60) / 3;
+const CARD_WIDTH = (width - 48) / 3;
 
 export default function HomeScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const { playClick, isMusicPlaying, toggleBackgroundMusic, isSoundEnabled, toggleSound } = useSounds();
   
-  // Animations
   const [pulseAnim] = useState(new Animated.Value(1));
-  const [confettiAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
-    // Pulse animation for play button
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.02,
-          duration: 1500,
+          toValue: 1.03,
+          duration: 1200,
           easing: Easing.ease,
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 1500,
+          duration: 1200,
           easing: Easing.ease,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // Confetti animation
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(confettiAnim, {
-          toValue: 1,
-          duration: 2000,
-          easing: Easing.linear,
-          useNativeDriver: true,
-        }),
-        Animated.timing(confettiAnim, {
-          toValue: 0,
-          duration: 2000,
-          easing: Easing.linear,
           useNativeDriver: true,
         }),
       ])
     ).start();
   }, []);
 
+  // 6 Oyun Modu - Resimdeki gibi
   const gameModes = [
     { 
       id: 'value-guess', 
       name: 'Değer Tahmini', 
-      emoji: '💰',
-      image: '💶',
-      colors: ['#2E7D32', '#1B5E20'],
+      icon: '💰',
+      subtitle: '€',
+      colors: ['#2E7D32', '#1B5E20', '#004D00'],
     },
     { 
       id: 'mystery-player', 
       name: 'Gizli Oyuncu', 
-      emoji: '❓',
-      image: '🕵️',
-      colors: ['#7B1FA2', '#4A148C'],
+      icon: '❓',
+      subtitle: '🕵️',
+      colors: ['#6A1B9A', '#4A148C', '#311B92'],
     },
     { 
       id: 'career-path', 
       name: 'Kariyer Yolu', 
-      emoji: '📈',
-      image: '💼',
-      colors: ['#1565C0', '#0D47A1'],
+      icon: '📈',
+      subtitle: '💼',
+      colors: ['#1565C0', '#0D47A1', '#01579B'],
+    },
+    { 
+      id: 'letter-hunt', 
+      name: 'Harf Avı', 
+      icon: '🔤',
+      subtitle: 'ABC',
+      colors: ['#C62828', '#B71C1C', '#8E0000'],
+    },
+    { 
+      id: 'club-connection', 
+      name: 'Takım Bağlantısı', 
+      icon: '🔗',
+      subtitle: '⚽',
+      colors: ['#00838F', '#006064', '#004D40'],
+    },
+    { 
+      id: 'football-grid', 
+      name: 'Futbol Tablosu', 
+      icon: '⚡',
+      subtitle: '🏆',
+      colors: ['#EF6C00', '#E65100', '#BF360C'],
     },
   ];
 
@@ -98,6 +98,49 @@ export default function HomeScreen() {
     router.push(`/game/${gameId}`);
   };
 
+  const renderGameCard = (mode: typeof gameModes[0], index: number) => (
+    <Animatable.View
+      key={mode.id}
+      animation="fadeInUp"
+      duration={800}
+      delay={300 + index * 100}
+      style={styles.gameCardWrapper}
+    >
+      <TouchableOpacity
+        style={styles.gameCard}
+        onPress={() => handleGamePress(mode.id)}
+        activeOpacity={0.9}
+      >
+        <LinearGradient
+          colors={mode.colors}
+          style={styles.gameCardGradient}
+        >
+          {/* Main Icon */}
+          <View style={styles.gameIconContainer}>
+            <Text style={styles.gameMainIcon}>{mode.icon}</Text>
+            <Text style={styles.gameSubIcon}>{mode.subtitle}</Text>
+          </View>
+          
+          {/* Game Name */}
+          <Text style={styles.gameName}>{mode.name}</Text>
+          
+          {/* Play Button */}
+          <TouchableOpacity 
+            style={styles.gamePlayButton}
+            onPress={() => handleGamePress(mode.id)}
+          >
+            <LinearGradient
+              colors={['#00FF87', '#00CC6F', '#00994D']}
+              style={styles.gamePlayGradient}
+            >
+              <Text style={styles.gamePlayText}>Şimdi Oyna</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </LinearGradient>
+      </TouchableOpacity>
+    </Animatable.View>
+  );
+
   return (
     <ImageBackground source={HOME_BG} style={styles.container} resizeMode="cover">
       <View style={styles.overlay}>
@@ -105,7 +148,7 @@ export default function HomeScreen() {
           contentContainerStyle={styles.scrollContent} 
           showsVerticalScrollIndicator={false}
         >
-          {/* Header with Welcome */}
+          {/* Header - Hoş Geldiniz */}
           <Animatable.View animation="fadeInDown" duration={1000} style={styles.header}>
             <Text style={styles.welcomeText}>Hoş Geldiniz</Text>
             <View style={styles.nameRow}>
@@ -114,41 +157,38 @@ export default function HomeScreen() {
             </View>
           </Animatable.View>
 
-          {/* Stats Card - Scoreboard Style */}
+          {/* Stats Card - Skor Tablosu */}
           <Animatable.View animation="fadeInUp" duration={1000} delay={200}>
-            <View style={styles.statsCard}>
+            <View style={styles.statsCardContainer}>
               <LinearGradient
                 colors={['#3D8B40', '#2E7D32', '#1B5E20']}
-                style={styles.statsGradient}
+                style={styles.statsCard}
               >
-                {/* Confetti decoration */}
-                <View style={styles.confettiContainer}>
-                  <Text style={styles.confetti}>🎊</Text>
-                  <Text style={[styles.confetti, styles.confettiRight]}>🎉</Text>
-                </View>
-
                 {/* Stats Row */}
                 <View style={styles.statsRow}>
-                  {/* Wins with Trophy */}
+                  {/* Kazanç with Trophy */}
                   <View style={styles.statItem}>
                     <Text style={styles.trophyEmoji}>🏆</Text>
                     <Text style={styles.statLabel}>Kazanç</Text>
                   </View>
 
-                  {/* Score */}
+                  {/* Kayıp */}
                   <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{user?.stats?.wins || 0}</Text>
+                    <Text style={styles.statValue}>{user?.stats?.losses || 0}</Text>
                     <Text style={styles.statLabel}>Kayıp</Text>
                   </View>
 
-                  {/* Total Games */}
+                  {/* Toplam Oyun */}
                   <View style={styles.statItem}>
                     <Text style={styles.statValue}>{user?.stats?.total_games || 0}</Text>
                     <Text style={styles.statLabel}>Toplam Oyun</Text>
                   </View>
                 </View>
 
-                {/* Play Now Button */}
+                {/* Green field line */}
+                <View style={styles.fieldLine} />
+
+                {/* Şimdi Oyna Button */}
                 <Animated.View style={[styles.playButtonContainer, { transform: [{ scale: pulseAnim }] }]}>
                   <TouchableOpacity 
                     style={styles.playButton}
@@ -166,61 +206,18 @@ export default function HomeScreen() {
                     </LinearGradient>
                   </TouchableOpacity>
                 </Animated.View>
-
-                {/* Green field line */}
-                <View style={styles.fieldLine} />
               </LinearGradient>
-
-              {/* Golden border effect */}
-              <View style={styles.goldenBorder} />
             </View>
           </Animatable.View>
 
-          {/* Game Mode Cards */}
-          <View style={styles.gamesSection}>
-            <View style={styles.gamesRow}>
-              {gameModes.map((mode, index) => (
-                <Animatable.View
-                  key={mode.id}
-                  animation="fadeInUp"
-                  duration={800}
-                  delay={400 + index * 150}
-                  style={styles.gameCardWrapper}
-                >
-                  <TouchableOpacity
-                    style={styles.gameCard}
-                    onPress={() => handleGamePress(mode.id)}
-                    activeOpacity={0.9}
-                  >
-                    <LinearGradient
-                      colors={mode.colors}
-                      style={styles.gameCardGradient}
-                    >
-                      {/* Game Image/Emoji */}
-                      <View style={styles.gameImageContainer}>
-                        <Text style={styles.gameImage}>{mode.image}</Text>
-                      </View>
-                      
-                      {/* Game Name */}
-                      <Text style={styles.gameName}>{mode.name}</Text>
-                      
-                      {/* Play Button */}
-                      <TouchableOpacity 
-                        style={styles.gamePlayButton}
-                        onPress={() => handleGamePress(mode.id)}
-                      >
-                        <LinearGradient
-                          colors={['#00FF87', '#00CC6F']}
-                          style={styles.gamePlayGradient}
-                        >
-                          <Text style={styles.gamePlayText}>Şimdi Oyna</Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </Animatable.View>
-              ))}
-            </View>
+          {/* Game Cards - First Row (3 cards) */}
+          <View style={styles.gamesRow}>
+            {gameModes.slice(0, 3).map((mode, index) => renderGameCard(mode, index))}
+          </View>
+
+          {/* Game Cards - Second Row (3 cards) */}
+          <View style={styles.gamesRow}>
+            {gameModes.slice(3, 6).map((mode, index) => renderGameCard(mode, index + 3))}
           </View>
 
           {/* Bottom Football */}
@@ -229,7 +226,7 @@ export default function HomeScreen() {
           </View>
         </ScrollView>
 
-        {/* Sound Controls - Floating */}
+        {/* Sound Controls */}
         <View style={styles.soundControls}>
           <TouchableOpacity 
             style={styles.soundBtn} 
@@ -263,10 +260,10 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 15, 30, 0.4)',
+    backgroundColor: 'rgba(0, 10, 20, 0.3)',
   },
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingTop: 50,
     paddingBottom: 100,
   },
@@ -278,15 +275,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'rgba(255,255,255,0.9)',
     fontWeight: '500',
-    marginBottom: 4,
   },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   userName: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '900',
     color: '#FFD700',
     textShadowColor: 'rgba(0,0,0,0.8)',
@@ -294,53 +290,24 @@ const styles = StyleSheet.create({
     textShadowRadius: 6,
   },
   ballEmoji: {
-    fontSize: 32,
+    fontSize: 30,
   },
-  statsCard: {
+  statsCardContainer: {
     borderRadius: 20,
-    overflow: 'hidden',
-    marginBottom: 20,
-    position: 'relative',
-  },
-  statsGradient: {
-    padding: 16,
-    paddingBottom: 20,
-    borderRadius: 18,
+    marginBottom: 16,
     borderWidth: 3,
     borderColor: '#FFD700',
+    overflow: 'hidden',
   },
-  goldenBorder: {
-    position: 'absolute',
-    top: -2,
-    left: -2,
-    right: -2,
-    bottom: -2,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 215, 0, 0.5)',
-  },
-  confettiContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingTop: 5,
-  },
-  confetti: {
-    fontSize: 20,
-  },
-  confettiRight: {
-    transform: [{ scaleX: -1 }],
+  statsCard: {
+    padding: 12,
+    paddingBottom: 16,
   },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingVertical: 12,
-    marginTop: 10,
+    paddingVertical: 8,
   },
   statItem: {
     alignItems: 'center',
@@ -348,60 +315,49 @@ const styles = StyleSheet.create({
   },
   trophyEmoji: {
     fontSize: 36,
-    marginBottom: 4,
   },
   statValue: {
-    fontSize: 36,
+    fontSize: 32,
     fontWeight: '900',
     color: '#FFD700',
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 2,
   },
   statLabel: {
     fontSize: 14,
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: '700',
     marginTop: 2,
   },
+  fieldLine: {
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+    marginVertical: 10,
+    marginHorizontal: -12,
+  },
   playButtonContainer: {
-    marginTop: 8,
-    marginHorizontal: 40,
+    marginHorizontal: 50,
   },
   playButton: {
     borderRadius: 25,
     overflow: 'hidden',
-    shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
   },
   playButtonGradient: {
-    paddingVertical: 14,
-    paddingHorizontal: 40,
+    paddingVertical: 12,
     alignItems: 'center',
   },
   playButtonText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '900',
     color: '#1a1a2e',
     letterSpacing: 1,
   },
-  fieldLine: {
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    marginTop: 16,
-    marginHorizontal: -16,
-    borderRadius: 2,
-  },
-  gamesSection: {
-    marginTop: 8,
-  },
   gamesRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 10,
+    marginBottom: 12,
+    gap: 8,
   },
   gameCardWrapper: {
     flex: 1,
@@ -410,76 +366,69 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 6,
+    borderColor: 'rgba(255,215,0,0.5)',
   },
   gameCardGradient: {
-    padding: 12,
+    padding: 10,
     alignItems: 'center',
-    minHeight: 180,
+    minHeight: 150,
     justifyContent: 'space-between',
   },
-  gameImageContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    justifyContent: 'center',
+  gameIconContainer: {
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  gameImage: {
-    fontSize: 40,
+  gameMainIcon: {
+    fontSize: 36,
+  },
+  gameSubIcon: {
+    fontSize: 18,
+    marginTop: -4,
   },
   gameName: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 10,
-    textShadowColor: 'rgba(0,0,0,0.5)',
+    marginVertical: 6,
+    textShadowColor: 'rgba(0,0,0,0.7)',
     textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    textShadowRadius: 3,
   },
   gamePlayButton: {
-    borderRadius: 15,
+    borderRadius: 12,
     overflow: 'hidden',
     width: '100%',
   },
   gamePlayGradient: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 6,
     alignItems: 'center',
   },
   gamePlayText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '800',
     color: '#1a1a2e',
   },
   bottomSection: {
     alignItems: 'flex-end',
-    marginTop: 16,
-    paddingRight: 10,
+    marginTop: 8,
+    paddingRight: 8,
   },
   bottomBall: {
-    fontSize: 70,
+    fontSize: 60,
     opacity: 0.9,
   },
   soundControls: {
     position: 'absolute',
     top: 50,
-    right: 16,
+    right: 12,
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   soundBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
