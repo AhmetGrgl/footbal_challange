@@ -9,10 +9,10 @@ import {
   Animated,
   Easing,
   Dimensions,
+  Image,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSounds } from '../../contexts/SoundContext';
-import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -20,50 +20,49 @@ import * as Animatable from 'react-native-animatable';
 
 const HOME_BG = require('../../assets/images/home-bg.jpg');
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 48) / 2;
+const CARD_WIDTH = (width - 60) / 3;
 
 export default function HomeScreen() {
   const { user } = useAuth();
-  const { t } = useTranslation();
   const router = useRouter();
   const { playClick, isMusicPlaying, toggleBackgroundMusic, isSoundEnabled, toggleSound } = useSounds();
   
   // Animations
-  const [confettiAnim] = useState(new Animated.Value(0));
   const [pulseAnim] = useState(new Animated.Value(1));
+  const [confettiAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
-    // Confetti floating animation
+    // Pulse animation for play button
     Animated.loop(
       Animated.sequence([
-        Animated.timing(confettiAnim, {
-          toValue: 1,
-          duration: 3000,
-          easing: Easing.linear,
+        Animated.timing(pulseAnim, {
+          toValue: 1.02,
+          duration: 1500,
+          easing: Easing.ease,
           useNativeDriver: true,
         }),
-        Animated.timing(confettiAnim, {
-          toValue: 0,
-          duration: 3000,
-          easing: Easing.linear,
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1500,
+          easing: Easing.ease,
           useNativeDriver: true,
         }),
       ])
     ).start();
 
-    // Pulse animation for play button
+    // Confetti animation
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.05,
-          duration: 1000,
-          easing: Easing.ease,
+        Animated.timing(confettiAnim, {
+          toValue: 1,
+          duration: 2000,
+          easing: Easing.linear,
           useNativeDriver: true,
         }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1000,
-          easing: Easing.ease,
+        Animated.timing(confettiAnim, {
+          toValue: 0,
+          duration: 2000,
+          easing: Easing.linear,
           useNativeDriver: true,
         }),
       ])
@@ -75,43 +74,22 @@ export default function HomeScreen() {
       id: 'value-guess', 
       name: 'Değer Tahmini', 
       emoji: '💰',
+      image: '💶',
       colors: ['#2E7D32', '#1B5E20'],
-      description: 'Futbolcuların değerini tahmin et!'
     },
     { 
       id: 'mystery-player', 
       name: 'Gizli Oyuncu', 
       emoji: '❓',
+      image: '🕵️',
       colors: ['#7B1FA2', '#4A148C'],
-      description: 'Kim bu gizemli futbolcu?'
     },
     { 
       id: 'career-path', 
       name: 'Kariyer Yolu', 
       emoji: '📈',
+      image: '💼',
       colors: ['#1565C0', '#0D47A1'],
-      description: 'Transferleri takip et!'
-    },
-    { 
-      id: 'letter-hunt', 
-      name: 'Harf Avı', 
-      emoji: '🔤',
-      colors: ['#C62828', '#B71C1C'],
-      description: 'Harflerden oyuncu bul!'
-    },
-    { 
-      id: 'club-connection', 
-      name: 'Takım Bağlantısı', 
-      emoji: '🔗',
-      colors: ['#00838F', '#006064'],
-      description: 'Takımları eşleştir!'
-    },
-    { 
-      id: 'football-grid', 
-      name: 'Futbol Grid', 
-      emoji: '🧩',
-      colors: ['#EF6C00', '#E65100'],
-      description: 'Grid bulmacasını çöz!'
     },
   ];
 
@@ -127,40 +105,10 @@ export default function HomeScreen() {
           contentContainerStyle={styles.scrollContent} 
           showsVerticalScrollIndicator={false}
         >
-          {/* Sound Control */}
-          <View style={styles.soundControl}>
-            <TouchableOpacity 
-              style={styles.soundButton} 
-              onPress={() => {
-                playClick();
-                toggleSound();
-              }}
-            >
-              <Ionicons 
-                name={isSoundEnabled ? "volume-high" : "volume-mute"} 
-                size={24} 
-                color="#FFD700" 
-              />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.soundButton} 
-              onPress={() => {
-                playClick();
-                toggleBackgroundMusic();
-              }}
-            >
-              <Ionicons 
-                name={isMusicPlaying ? "musical-notes" : "musical-notes-outline"} 
-                size={24} 
-                color={isMusicPlaying ? "#00FF87" : "#FFD700"} 
-              />
-            </TouchableOpacity>
-          </View>
-
           {/* Header with Welcome */}
           <Animatable.View animation="fadeInDown" duration={1000} style={styles.header}>
             <Text style={styles.welcomeText}>Hoş Geldiniz</Text>
-            <View style={styles.nameContainer}>
+            <View style={styles.nameRow}>
               <Text style={styles.userName}>{user?.name || 'Futbolcu'}</Text>
               <Text style={styles.ballEmoji}>⚽</Text>
             </View>
@@ -168,62 +116,75 @@ export default function HomeScreen() {
 
           {/* Stats Card - Scoreboard Style */}
           <Animatable.View animation="fadeInUp" duration={1000} delay={200}>
-            <LinearGradient
-              colors={['#2E7D32', '#1B5E20', '#2E7D32']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.statsCard}
-            >
-              <View style={styles.statsInner}>
-                {/* Trophy and Wins */}
-                <View style={styles.statItem}>
-                  <Text style={styles.trophyEmoji}>🏆</Text>
-                  <Text style={styles.statValue}>{user?.stats?.wins || 0}</Text>
-                  <Text style={styles.statLabel}>Kazanç</Text>
+            <View style={styles.statsCard}>
+              <LinearGradient
+                colors={['#3D8B40', '#2E7D32', '#1B5E20']}
+                style={styles.statsGradient}
+              >
+                {/* Confetti decoration */}
+                <View style={styles.confettiContainer}>
+                  <Text style={styles.confetti}>🎊</Text>
+                  <Text style={[styles.confetti, styles.confettiRight]}>🎉</Text>
                 </View>
 
-                {/* Losses */}
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{user?.stats?.losses || 0}</Text>
-                  <Text style={styles.statLabel}>Kayıp</Text>
+                {/* Stats Row */}
+                <View style={styles.statsRow}>
+                  {/* Wins with Trophy */}
+                  <View style={styles.statItem}>
+                    <Text style={styles.trophyEmoji}>🏆</Text>
+                    <Text style={styles.statLabel}>Kazanç</Text>
+                  </View>
+
+                  {/* Score */}
+                  <View style={styles.statItem}>
+                    <Text style={styles.statValue}>{user?.stats?.wins || 0}</Text>
+                    <Text style={styles.statLabel}>Kayıp</Text>
+                  </View>
+
+                  {/* Total Games */}
+                  <View style={styles.statItem}>
+                    <Text style={styles.statValue}>{user?.stats?.total_games || 0}</Text>
+                    <Text style={styles.statLabel}>Toplam Oyun</Text>
+                  </View>
                 </View>
 
-                {/* Total Games */}
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{user?.stats?.total_games || 0}</Text>
-                  <Text style={styles.statLabel}>Toplam Oyun</Text>
-                </View>
-              </View>
-
-              {/* Play Now Button */}
-              <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-                <TouchableOpacity 
-                  style={styles.playNowButton}
-                  onPress={() => {
-                    playClick();
-                    router.push('/game/mystery-player');
-                  }}
-                >
-                  <LinearGradient
-                    colors={['#FFD700', '#FFA500']}
-                    style={styles.playNowGradient}
+                {/* Play Now Button */}
+                <Animated.View style={[styles.playButtonContainer, { transform: [{ scale: pulseAnim }] }]}>
+                  <TouchableOpacity 
+                    style={styles.playButton}
+                    onPress={() => {
+                      playClick();
+                      router.push('/game/mystery-player');
+                    }}
+                    activeOpacity={0.9}
                   >
-                    <Text style={styles.playNowText}>Şimdi Oyna</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </Animated.View>
-            </LinearGradient>
+                    <LinearGradient
+                      colors={['#FFD700', '#FFC107', '#FF9800']}
+                      style={styles.playButtonGradient}
+                    >
+                      <Text style={styles.playButtonText}>Şimdi Oyna</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </Animated.View>
+
+                {/* Green field line */}
+                <View style={styles.fieldLine} />
+              </LinearGradient>
+
+              {/* Golden border effect */}
+              <View style={styles.goldenBorder} />
+            </View>
           </Animatable.View>
 
-          {/* Game Modes Grid */}
+          {/* Game Mode Cards */}
           <View style={styles.gamesSection}>
-            <View style={styles.gamesGrid}>
+            <View style={styles.gamesRow}>
               {gameModes.map((mode, index) => (
                 <Animatable.View
                   key={mode.id}
                   animation="fadeInUp"
                   duration={800}
-                  delay={300 + index * 100}
+                  delay={400 + index * 150}
                   style={styles.gameCardWrapper}
                 >
                   <TouchableOpacity
@@ -235,9 +196,9 @@ export default function HomeScreen() {
                       colors={mode.colors}
                       style={styles.gameCardGradient}
                     >
-                      {/* Game Icon/Emoji */}
-                      <View style={styles.gameEmojiContainer}>
-                        <Text style={styles.gameEmoji}>{mode.emoji}</Text>
+                      {/* Game Image/Emoji */}
+                      <View style={styles.gameImageContainer}>
+                        <Text style={styles.gameImage}>{mode.image}</Text>
                       </View>
                       
                       {/* Game Name */}
@@ -262,11 +223,35 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Bottom Decorative Ball */}
-          <View style={styles.bottomDecor}>
+          {/* Bottom Football */}
+          <View style={styles.bottomSection}>
             <Text style={styles.bottomBall}>⚽</Text>
           </View>
         </ScrollView>
+
+        {/* Sound Controls - Floating */}
+        <View style={styles.soundControls}>
+          <TouchableOpacity 
+            style={styles.soundBtn} 
+            onPress={() => { playClick(); toggleSound(); }}
+          >
+            <Ionicons 
+              name={isSoundEnabled ? "volume-high" : "volume-mute"} 
+              size={20} 
+              color="#FFD700" 
+            />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.soundBtn} 
+            onPress={() => { playClick(); toggleBackgroundMusic(); }}
+          >
+            <Ionicons 
+              name={isMusicPlaying ? "musical-notes" : "musical-notes-outline"} 
+              size={20} 
+              color={isMusicPlaying ? "#00FF87" : "#FFD700"} 
+            />
+          </TouchableOpacity>
+        </View>
       </View>
     </ImageBackground>
   );
@@ -278,42 +263,24 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 20, 10, 0.3)',
+    backgroundColor: 'rgba(0, 15, 30, 0.4)',
   },
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: 16,
     paddingTop: 50,
     paddingBottom: 100,
   },
-  soundControl: {
-    position: 'absolute',
-    top: 10,
-    right: 16,
-    flexDirection: 'row',
-    gap: 12,
-    zIndex: 10,
-  },
-  soundButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,215,0,0.3)',
-  },
   header: {
     alignItems: 'center',
-    marginBottom: 20,
-    marginTop: 20,
+    marginBottom: 16,
   },
   welcomeText: {
-    fontSize: 18,
+    fontSize: 16,
     color: 'rgba(255,255,255,0.9)',
     fontWeight: '500',
+    marginBottom: 4,
   },
-  nameContainer: {
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -324,133 +291,199 @@ const styles = StyleSheet.create({
     color: '#FFD700',
     textShadowColor: 'rgba(0,0,0,0.8)',
     textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
+    textShadowRadius: 6,
   },
   ballEmoji: {
-    fontSize: 36,
+    fontSize: 32,
   },
   statsCard: {
     borderRadius: 20,
-    padding: 3,
-    marginBottom: 24,
-    borderWidth: 2,
-    borderColor: 'rgba(255,215,0,0.4)',
+    overflow: 'hidden',
+    marginBottom: 20,
+    position: 'relative',
   },
-  statsInner: {
+  statsGradient: {
+    padding: 16,
+    paddingBottom: 20,
+    borderRadius: 18,
+    borderWidth: 3,
+    borderColor: '#FFD700',
+  },
+  goldenBorder: {
+    position: 'absolute',
+    top: -2,
+    left: -2,
+    right: -2,
+    bottom: -2,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 215, 0, 0.5)',
+  },
+  confettiContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    paddingTop: 5,
+  },
+  confetti: {
+    fontSize: 20,
+  },
+  confettiRight: {
+    transform: [{ scaleX: -1 }],
+  },
+  statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 10,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    borderRadius: 16,
+    paddingVertical: 12,
+    marginTop: 10,
   },
   statItem: {
     alignItems: 'center',
     minWidth: 80,
   },
   trophyEmoji: {
-    fontSize: 28,
+    fontSize: 36,
     marginBottom: 4,
   },
   statValue: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: '900',
     color: '#FFD700',
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    textShadowRadius: 3,
   },
   statLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.9)',
-    marginTop: 2,
+    fontSize: 14,
+    color: '#fff',
     fontWeight: '600',
+    marginTop: 2,
   },
-  playNowButton: {
-    marginTop: 12,
-    marginBottom: 8,
-    marginHorizontal: 60,
+  playButtonContainer: {
+    marginTop: 8,
+    marginHorizontal: 40,
+  },
+  playButton: {
     borderRadius: 25,
     overflow: 'hidden',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  playNowGradient: {
-    paddingVertical: 12,
-    paddingHorizontal: 32,
+  playButtonGradient: {
+    paddingVertical: 14,
+    paddingHorizontal: 40,
     alignItems: 'center',
   },
-  playNowText: {
-    fontSize: 18,
-    fontWeight: '800',
+  playButtonText: {
+    fontSize: 20,
+    fontWeight: '900',
     color: '#1a1a2e',
     letterSpacing: 1,
+  },
+  fieldLine: {
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    marginTop: 16,
+    marginHorizontal: -16,
+    borderRadius: 2,
   },
   gamesSection: {
     marginTop: 8,
   },
-  gamesGrid: {
+  gamesRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   gameCardWrapper: {
-    width: CARD_WIDTH,
-    marginBottom: 4,
+    flex: 1,
   },
   gameCard: {
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.3)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
   },
   gameCardGradient: {
-    padding: 16,
+    padding: 12,
     alignItems: 'center',
-    minHeight: 160,
+    minHeight: 180,
+    justifyContent: 'space-between',
   },
-  gameEmojiContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  gameImageContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  gameEmoji: {
-    fontSize: 32,
+  gameImage: {
+    fontSize: 40,
   },
   gameName: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '800',
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
   gamePlayButton: {
-    borderRadius: 20,
+    borderRadius: 15,
     overflow: 'hidden',
+    width: '100%',
   },
   gamePlayGradient: {
     paddingVertical: 8,
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
+    alignItems: 'center',
   },
   gamePlayText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: '#1a1a2e',
   },
-  bottomDecor: {
+  bottomSection: {
     alignItems: 'flex-end',
-    marginTop: 20,
-    paddingRight: 20,
+    marginTop: 16,
+    paddingRight: 10,
   },
   bottomBall: {
-    fontSize: 60,
-    opacity: 0.8,
+    fontSize: 70,
+    opacity: 0.9,
+  },
+  soundControls: {
+    position: 'absolute',
+    top: 50,
+    right: 16,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  soundBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.4)',
   },
 });
