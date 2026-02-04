@@ -25,7 +25,7 @@ const getBackendUrl = (): string => {
   
   // For native apps (Expo Go), use the preview URL
   // This URL has proper ingress routing for /api/*
-  const previewUrl = 'https://reg-flow-test.preview.emergentagent.com';
+  const previewUrl = 'https://career-path-mode.preview.emergentagent.com';
   
   // Try expo config first
   const expoBackendUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL;

@@ -6,7 +6,7 @@ import sys
 from typing import Dict, Any
 
 # Configuration
-BACKEND_URL = "https://reg-flow-test.preview.emergentagent.com"
+BACKEND_URL = "https://career-path-mode.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 class AuthAPITester:

@@ -61,7 +61,7 @@ export default function MysteryPlayerGame() {
   
   useEffect(() => {
     // Connect to socket
-    const backendUrl = 'https://reg-flow-test.preview.emergentagent.com';
+    const backendUrl = 'https://career-path-mode.preview.emergentagent.com';
     socketRef.current = io(backendUrl, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
