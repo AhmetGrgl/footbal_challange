@@ -966,6 +966,70 @@ async def get_random_player():
         return result[0]
     raise HTTPException(status_code=404, detail="No players found")
 
+# ============ CAREER PATH GAME ROUTES ============
+
+from popular_players import POPULAR_PLAYERS
+import random
+
+@api_router.get("/career-path/random-player")
+async def get_career_path_player(difficulty: str = "all"):
+    """Get a random popular player for Career Path game"""
+    if difficulty == "all":
+        players = POPULAR_PLAYERS
+    else:
+        players = [p for p in POPULAR_PLAYERS if p.get("difficulty") == difficulty]
+    
+    if not players:
+        players = POPULAR_PLAYERS
+    
+    player = random.choice(players)
+    return player
+
+@api_router.get("/career-path/players")
+async def get_all_career_path_players():
+    """Get all player names for autocomplete"""
+    return [{"name": p["name"], "difficulty": p.get("difficulty", "medium")} for p in POPULAR_PLAYERS]
+
+@api_router.post("/career-path/check-guess")
+async def check_career_path_guess(player_name: str, guess: str):
+    """Check if guess is correct and provide hints"""
+    # Oyuncuyu bul
+    player = next((p for p in POPULAR_PLAYERS if p["name"].lower() == player_name.lower()), None)
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    # Doğru mu?
+    is_correct = guess.lower().strip() == player["name"].lower()
+    
+    # Yanlışsa ipucu ver
+    hints = []
+    if not is_correct:
+        # Aynı ülkeden mi?
+        guessed_player = next((p for p in POPULAR_PLAYERS if p["name"].lower() == guess.lower().strip()), None)
+        if guessed_player:
+            if guessed_player["nationality"] == player["nationality"]:
+                hints.append(f"✅ Doğru ülke! ({player['nationality']})")
+            else:
+                hints.append(f"❌ Yanlış ülke")
+            
+            if guessed_player["position"] == player["position"]:
+                hints.append(f"✅ Doğru pozisyon! ({player['position']})")
+            else:
+                hints.append(f"❌ Yanlış pozisyon")
+            
+            # Aynı takımda oynadılar mı?
+            guessed_teams = set([t["team"] for t in guessed_player.get("team_history", [])])
+            player_teams = set([t["team"] for t in player.get("team_history", [])])
+            common_teams = guessed_teams.intersection(player_teams)
+            if common_teams:
+                hints.append(f"🔗 Ortak takım: {list(common_teams)[0]}")
+    
+    return {
+        "correct": is_correct,
+        "hints": hints,
+        "player_name": player["name"] if is_correct else None
+    }
+
 # ============ FRIENDS ROUTES ============
 
 @api_router.get("/friends")
