@@ -602,6 +602,226 @@ async def update_language(request: Request, language: str):
     )
     return {"message": "Language updated"}
 
+# ============ GAME SYSTEMS API ============
+
+@api_router.get("/game-systems/leagues")
+async def get_all_leagues():
+    """Get all league information"""
+    return LEAGUES
+
+@api_router.get("/game-systems/badges")
+async def get_all_badges():
+    """Get all badges"""
+    return BADGES
+
+@api_router.get("/game-systems/game-modes")
+async def get_all_game_modes():
+    """Get all game modes"""
+    return GAME_MODES
+
+@api_router.get("/game-systems/streak-bonuses")
+async def get_all_streak_bonuses():
+    """Get all streak bonuses"""
+    return STREAK_BONUSES
+
+@api_router.get("/game-systems/my-stats")
+async def get_my_game_stats(request: Request):
+    """Get current user's game statistics"""
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    # ELO ve lig bilgisi
+    elo = user.get("elo", 1000)
+    league = get_league_for_elo(elo)
+    
+    # Genel istatistikler
+    stats = {
+        "elo": elo,
+        "league": league,
+        "coins": user.get("coins", 0),
+        "xp": user.get("xp", 0),
+        "level": user.get("level", 1),
+        "wins": user.get("wins", 0),
+        "losses": user.get("losses", 0),
+        "total_games": user.get("total_games", 0),
+        "win_streak": user.get("win_streak", 0),
+        "best_streak": user.get("best_streak", 0),
+        "badges": user.get("badges", []),
+        "game_stats": user.get("game_stats", {})
+    }
+    
+    return stats
+
+class GameResultSubmit(BaseModel):
+    game_mode: str
+    won: bool
+    score: int
+    time_taken: float  # saniye
+    perfect_game: bool = False
+    extra_data: dict = {}
+
+@api_router.post("/game-systems/submit-result")
+async def submit_game_result(result: GameResultSubmit, request: Request):
+    """Submit a game result and calculate rewards"""
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    user_id = user["user_id"]
+    current_elo = user.get("elo", 1000)
+    current_streak = user.get("win_streak", 0) if result.won else 0
+    
+    # Zaman bonusu hesapla (hızlı cevap = daha fazla bonus)
+    time_bonus = 1.0
+    if result.time_taken < 5:
+        time_bonus = 1.5
+    elif result.time_taken < 10:
+        time_bonus = 1.25
+    elif result.time_taken < 15:
+        time_bonus = 1.1
+    
+    # Ödülleri hesapla
+    if result.won:
+        new_streak = current_streak + 1
+    else:
+        new_streak = 0
+    
+    rewards = calculate_game_rewards(
+        won=result.won,
+        elo=current_elo,
+        streak=new_streak,
+        time_bonus=time_bonus,
+        perfect_game=result.perfect_game
+    )
+    
+    # ELO değişimi
+    game_mode_config = GAME_MODES.get(result.game_mode, GAME_MODES["career_path"])
+    if result.won:
+        elo_change = game_mode_config["elo_gain"]
+    else:
+        elo_change = -game_mode_config["elo_loss"]
+    
+    new_elo = max(0, current_elo + elo_change)
+    new_league = get_league_for_elo(new_elo)
+    old_league = get_league_for_elo(current_elo)
+    
+    # Lig değişimi kontrolü
+    league_changed = new_league["id"] != old_league["id"]
+    league_promoted = league_changed and new_elo > current_elo
+    
+    # Rozetleri kontrol et
+    new_badges = []
+    current_badges = user.get("badges", [])
+    
+    # İlk zafer rozeti
+    if result.won and "first_win" not in current_badges:
+        new_badges.append("first_win")
+    
+    # Seri rozetleri
+    streak_bonus = rewards.get("streak_bonus")
+    if streak_bonus and "badge" in streak_bonus:
+        if streak_bonus["badge"] not in current_badges:
+            new_badges.append(streak_bonus["badge"])
+    
+    # Hız şeytanı rozeti
+    if result.won and result.time_taken < 3 and "speed_demon" not in current_badges:
+        new_badges.append("speed_demon")
+    
+    # Mükemmel oyun rozeti
+    if result.perfect_game and "perfect_game" not in current_badges:
+        new_badges.append("perfect_game")
+    
+    # Efsane lig rozeti
+    if new_league["id"] == "legend" and "legend_rank" not in current_badges:
+        new_badges.append("legend_rank")
+    
+    # En iyi seri güncelleme
+    best_streak = user.get("best_streak", 0)
+    if new_streak > best_streak:
+        best_streak = new_streak
+    
+    # Veritabanını güncelle
+    update_data = {
+        "elo": new_elo,
+        "coins": user.get("coins", 0) + rewards["coins"],
+        "xp": user.get("xp", 0) + rewards["xp"],
+        "win_streak": new_streak,
+        "best_streak": best_streak,
+        "total_games": user.get("total_games", 0) + 1
+    }
+    
+    if result.won:
+        update_data["wins"] = user.get("wins", 0) + 1
+    else:
+        update_data["losses"] = user.get("losses", 0) + 1
+    
+    # Oyun modu istatistiklerini güncelle
+    game_stats = user.get("game_stats", {})
+    mode_stats = game_stats.get(result.game_mode, {
+        "games_played": 0,
+        "wins": 0,
+        "high_score": 0,
+        "total_score": 0
+    })
+    mode_stats["games_played"] += 1
+    mode_stats["total_score"] += result.score
+    if result.won:
+        mode_stats["wins"] += 1
+    if result.score > mode_stats["high_score"]:
+        mode_stats["high_score"] = result.score
+    game_stats[result.game_mode] = mode_stats
+    update_data["game_stats"] = game_stats
+    
+    # Rozetleri ekle
+    if new_badges:
+        update_data["badges"] = current_badges + new_badges
+    
+    await db.users.update_one(
+        {"user_id": user_id},
+        {"$set": update_data}
+    )
+    
+    return {
+        "rewards": rewards,
+        "elo_change": elo_change,
+        "new_elo": new_elo,
+        "old_league": old_league,
+        "new_league": new_league,
+        "league_changed": league_changed,
+        "league_promoted": league_promoted,
+        "new_streak": new_streak,
+        "best_streak": best_streak,
+        "new_badges": new_badges,
+        "time_bonus": time_bonus
+    }
+
+@api_router.get("/game-systems/global-leaderboard")
+async def get_global_leaderboard(limit: int = 100):
+    """Get global leaderboard by ELO"""
+    users = await db.users.find(
+        {"elo": {"$gt": 0}},
+        {"_id": 0, "user_id": 1, "username": 1, "avatar": 1, "elo": 1, "wins": 1, "losses": 1, "best_streak": 1}
+    ).sort("elo", -1).limit(limit).to_list(limit)
+    
+    leaderboard = []
+    for i, user in enumerate(users):
+        elo = user.get("elo", 1000)
+        league = get_league_for_elo(elo)
+        leaderboard.append({
+            "rank": i + 1,
+            "user_id": user.get("user_id"),
+            "username": user.get("username", "Anonim"),
+            "avatar": user.get("avatar", "⚽"),
+            "elo": elo,
+            "league": league,
+            "wins": user.get("wins", 0),
+            "losses": user.get("losses", 0),
+            "best_streak": user.get("best_streak", 0)
+        })
+    
+    return leaderboard
+
 @api_router.get("/users/search")
 async def search_users(username: str, request: Request):
     """Search users by username"""
