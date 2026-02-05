@@ -180,7 +180,15 @@ export default function CareerPathGame() {
       setGameState('correct');
       const pointsEarned = Math.max(100 - (revealedClubs - 1) * 15, 20) * (streak + 1);
       setScore(prev => prev + pointsEarned);
-      setStreak(prev => prev + 1);
+      const newStreak = streak + 1;
+      setStreak(newStreak);
+      setCorrectGuesses(prev => prev + 1);
+      setTotalGames(prev => prev + 1);
+      
+      // En iyi seriyi güncelle
+      if (newStreak > bestStreak) {
+        setBestStreak(newStreak);
+      }
       
       // 2 saniye sonra yeni oyuncu
       setTimeout(() => {
@@ -213,7 +221,8 @@ export default function CareerPathGame() {
       }
       
       if (lives <= 1) {
-        setGameState('gameover');
+        // Oyun bitti - skoru gönder
+        handleGameOver();
       } else {
         setGameState('wrong');
         setTimeout(() => setGameState('playing'), 1500);
@@ -221,6 +230,58 @@ export default function CareerPathGame() {
       
       setGuess('');
     }
+  };
+  
+  // Oyun bitti - skoru gönder
+  const handleGameOver = async () => {
+    setGameState('gameover');
+    setSubmittingScore(true);
+    
+    try {
+      // Skoru backend'e gönder
+      const result = await api.submitCareerPathScore(score, correctGuesses, totalGames, bestStreak);
+      setScoreResult(result);
+      
+      // Leaderboard'u yükle
+      const lb = await api.getCareerPathLeaderboard(20);
+      setLeaderboard(lb);
+      
+      // Kendi istatistiklerimi yükle
+      const stats = await api.getCareerPathMyStats();
+      setMyStats(stats);
+    } catch (error) {
+      console.error('Skor gönderilemedi:', error);
+    } finally {
+      setSubmittingScore(false);
+    }
+  };
+  
+  // Leaderboard'u göster
+  const showLeaderboardScreen = async () => {
+    setLoading(true);
+    try {
+      const lb = await api.getCareerPathLeaderboard(50);
+      setLeaderboard(lb);
+      const stats = await api.getCareerPathMyStats();
+      setMyStats(stats);
+      setGameState('leaderboard');
+    } catch (error) {
+      console.error('Leaderboard yüklenemedi:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Yeni oyun başlat
+  const startNewGame = () => {
+    setScore(0);
+    setStreak(0);
+    setBestStreak(0);
+    setCorrectGuesses(0);
+    setTotalGames(0);
+    setLives(5);
+    setScoreResult(null);
+    loadGame();
   };
   
   // İpucu aç
