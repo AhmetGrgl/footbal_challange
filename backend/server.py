@@ -95,6 +95,12 @@ class GameRoom(BaseModel):
     question_start_time: Optional[datetime] = None
     round_answers: dict = {}  # Oyuncuların cevapları
 
+# Import game systems
+from game_systems import (
+    LEAGUES, STREAK_BONUSES, BADGES, GAME_MODES,
+    get_league_for_elo, calculate_elo_change, get_streak_bonus, calculate_game_rewards
+)
+
 class DailyTask(BaseModel):
     task_id: str
     description: str
