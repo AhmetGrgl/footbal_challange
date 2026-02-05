@@ -357,5 +357,40 @@ export const api = {
     return response.json();
   },
 
+  // Career Path Leaderboard
+  async submitCareerPathScore(score: number, correctGuesses: number, totalGames: number, bestStreak: number) {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const response = await fetch(`${BACKEND_URL}/api/career-path/submit-score`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}` 
+      },
+      body: JSON.stringify({
+        score,
+        correct_guesses: correctGuesses,
+        total_games: totalGames,
+        best_streak: bestStreak
+      })
+    });
+    if (!response.ok) throw new Error('Skor gönderilemedi');
+    return response.json();
+  },
+
+  async getCareerPathLeaderboard(limit: number = 50) {
+    const response = await fetch(`${BACKEND_URL}/api/career-path/leaderboard?limit=${limit}`);
+    if (!response.ok) return [];
+    return response.json();
+  },
+
+  async getCareerPathMyStats() {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const response = await fetch(`${BACKEND_URL}/api/career-path/my-stats`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) return null;
+    return response.json();
+  },
+
   getToken: () => AsyncStorage.getItem(TOKEN_KEY),
 };
