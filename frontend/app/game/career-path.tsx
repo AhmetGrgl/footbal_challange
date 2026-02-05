@@ -1069,4 +1069,153 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  
+  // Leaderboard & Score Result
+  submittingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  submittingText: {
+    color: NEON_COLORS.cyan,
+    fontSize: 14,
+  },
+  scoreResultContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: 'rgba(0,255,136,0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,255,136,0.3)',
+    width: '100%',
+  },
+  newHighScore: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: NEON_COLORS.yellow,
+    textShadowColor: NEON_COLORS.yellow,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+    marginBottom: 8,
+  },
+  coinsEarned: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: NEON_COLORS.green,
+    marginBottom: 4,
+  },
+  statsText: {
+    fontSize: 14,
+    color: '#aaa',
+  },
+  leaderboardButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  leaderboardButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
+  },
+  
+  // Leaderboard Screen
+  leaderboardCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  leaderboardGradient: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  leaderboardTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: NEON_COLORS.cyan,
+    marginBottom: 16,
+    textShadowColor: NEON_COLORS.cyan,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+  },
+  myRankContainer: {
+    backgroundColor: 'rgba(0,255,255,0.15)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0,255,255,0.4)',
+    marginBottom: 16,
+  },
+  myRankText: {
+    color: NEON_COLORS.cyan,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  leaderboardList: {
+    width: '100%',
+    maxHeight: 350,
+    marginBottom: 16,
+  },
+  leaderboardItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginBottom: 8,
+    gap: 10,
+  },
+  leaderboardItemFirst: {
+    backgroundColor: 'rgba(255,215,0,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.4)',
+  },
+  leaderboardItemSecond: {
+    backgroundColor: 'rgba(192,192,192,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(192,192,192,0.4)',
+  },
+  leaderboardItemThird: {
+    backgroundColor: 'rgba(205,127,50,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(205,127,50,0.4)',
+  },
+  leaderboardRank: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+    width: 35,
+    textAlign: 'center',
+  },
+  leaderboardAvatar: {
+    fontSize: 24,
+  },
+  leaderboardUserInfo: {
+    flex: 1,
+  },
+  leaderboardUsername: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  leaderboardStats: {
+    fontSize: 11,
+    color: '#888',
+    marginTop: 2,
+  },
+  leaderboardScore: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: NEON_COLORS.green,
+    textShadowColor: NEON_COLORS.green,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
+  },
+  leaderboardButtons: {
+    gap: 12,
+    width: '100%',
+  },
 });
