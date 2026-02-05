@@ -42,8 +42,11 @@ export default function CareerPathGame() {
   const [lives, setLives] = useState(5);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
+  const [bestStreak, setBestStreak] = useState(0);
+  const [correctGuesses, setCorrectGuesses] = useState(0);
+  const [totalGames, setTotalGames] = useState(0);
   const [guess, setGuess] = useState('');
-  const [gameState, setGameState] = useState<'playing' | 'correct' | 'wrong' | 'gameover'>('playing');
+  const [gameState, setGameState] = useState<'playing' | 'correct' | 'wrong' | 'gameover' | 'leaderboard'>('playing');
   const [loading, setLoading] = useState(true);
   const [hints, setHints] = useState<string[]>([]);
   const [showHints, setShowHints] = useState(false);
@@ -51,6 +54,12 @@ export default function CareerPathGame() {
   const [allPlayers, setAllPlayers] = useState<any[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  
+  // Leaderboard
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [myStats, setMyStats] = useState<any>(null);
+  const [scoreResult, setScoreResult] = useState<any>(null);
+  const [submittingScore, setSubmittingScore] = useState(false);
   
   // Animasyonlar
   const pulseAnim = useRef(new Animated.Value(1)).current;
