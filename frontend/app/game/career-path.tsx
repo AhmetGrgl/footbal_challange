@@ -475,10 +475,88 @@ export default function CareerPathGame() {
                 <Text style={styles.gameOverPlayer}>Doğru Cevap: {player?.name}</Text>
                 <Text style={styles.finalScore}>Final Skor: {score}</Text>
                 
+                {/* Skor sonucu */}
+                {submittingScore ? (
+                  <View style={styles.submittingContainer}>
+                    <ActivityIndicator color={NEON_COLORS.cyan} />
+                    <Text style={styles.submittingText}>Skor kaydediliyor...</Text>
+                  </View>
+                ) : scoreResult && (
+                  <View style={styles.scoreResultContainer}>
+                    {scoreResult.is_new_high_score && (
+                      <Text style={styles.newHighScore}>🏆 YENİ REKOR!</Text>
+                    )}
+                    <Text style={styles.coinsEarned}>💰 +{scoreResult.coins_earned} Coin Kazandın!</Text>
+                    <Text style={styles.statsText}>
+                      En Yüksek Skor: {scoreResult.high_score}
+                    </Text>
+                  </View>
+                )}
+                
                 <View style={styles.gameOverButtons}>
-                  <TouchableOpacity style={styles.retryButton} onPress={loadGame}>
+                  <TouchableOpacity style={styles.retryButton} onPress={startNewGame}>
                     <LinearGradient colors={[NEON_COLORS.green, '#00AA66']} style={styles.retryGradient}>
                       <Text style={styles.retryText}>🔄 Tekrar Oyna</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={styles.leaderboardButton} onPress={showLeaderboardScreen}>
+                    <LinearGradient colors={[NEON_COLORS.yellow, '#FFB800']} style={styles.retryGradient}>
+                      <Text style={styles.leaderboardButtonText}>🏆 Liderlik Tablosu</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={styles.menuButton} onPress={() => router.back()}>
+                    <Text style={styles.menuText}>🏠 Ana Menü</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+            </View>
+          )}
+          
+          {/* Leaderboard Ekranı */}
+          {gameState === 'leaderboard' && (
+            <View style={styles.leaderboardCard}>
+              <LinearGradient colors={['rgba(0,212,255,0.2)', 'rgba(0,255,136,0.1)']} style={styles.leaderboardGradient}>
+                <Text style={styles.leaderboardTitle}>🏆 LİDERLİK TABLOSU</Text>
+                
+                {/* Kendi sıralaman */}
+                {myStats && (
+                  <View style={styles.myRankContainer}>
+                    <Text style={styles.myRankText}>
+                      Senin Sıran: #{myStats.rank} | En Yüksek: {myStats.stats.high_score}
+                    </Text>
+                  </View>
+                )}
+                
+                {/* Top 20 */}
+                <ScrollView style={styles.leaderboardList} showsVerticalScrollIndicator={false}>
+                  {leaderboard.map((user, index) => (
+                    <View key={user.user_id || index} style={[
+                      styles.leaderboardItem,
+                      index === 0 && styles.leaderboardItemFirst,
+                      index === 1 && styles.leaderboardItemSecond,
+                      index === 2 && styles.leaderboardItemThird,
+                    ]}>
+                      <Text style={styles.leaderboardRank}>
+                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${user.rank}`}
+                      </Text>
+                      <Text style={styles.leaderboardAvatar}>{user.avatar || '⚽'}</Text>
+                      <View style={styles.leaderboardUserInfo}>
+                        <Text style={styles.leaderboardUsername}>{user.username}</Text>
+                        <Text style={styles.leaderboardStats}>
+                          🔥 {user.best_streak} | ✅ {user.correct_guesses}
+                        </Text>
+                      </View>
+                      <Text style={styles.leaderboardScore}>{user.high_score}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+                
+                <View style={styles.leaderboardButtons}>
+                  <TouchableOpacity style={styles.retryButton} onPress={startNewGame}>
+                    <LinearGradient colors={[NEON_COLORS.green, '#00AA66']} style={styles.retryGradient}>
+                      <Text style={styles.retryText}>🎮 Oyna</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                   
