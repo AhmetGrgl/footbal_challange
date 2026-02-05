@@ -1030,6 +1030,123 @@ async def check_career_path_guess(player_name: str, guess: str):
         "player_name": player["name"] if is_correct else None
     }
 
+# ============ CAREER PATH LEADERBOARD ============
+
+class CareerPathScoreSubmit(BaseModel):
+    score: int
+    correct_guesses: int
+    total_games: int
+    best_streak: int
+
+@api_router.post("/career-path/submit-score")
+async def submit_career_path_score(score_data: CareerPathScoreSubmit, request: Request):
+    """Submit career path game score"""
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    # Kullanıcının kariyer yolu skorunu güncelle
+    career_stats = user.get("career_path_stats", {
+        "high_score": 0,
+        "total_score": 0,
+        "games_played": 0,
+        "correct_guesses": 0,
+        "best_streak": 0
+    })
+    
+    # En yüksek skor kontrolü
+    is_new_high_score = score_data.score > career_stats.get("high_score", 0)
+    
+    # İstatistikleri güncelle
+    career_stats["total_score"] = career_stats.get("total_score", 0) + score_data.score
+    career_stats["games_played"] = career_stats.get("games_played", 0) + score_data.total_games
+    career_stats["correct_guesses"] = career_stats.get("correct_guesses", 0) + score_data.correct_guesses
+    
+    if is_new_high_score:
+        career_stats["high_score"] = score_data.score
+    
+    if score_data.best_streak > career_stats.get("best_streak", 0):
+        career_stats["best_streak"] = score_data.best_streak
+    
+    # Veritabanını güncelle
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": {"career_path_stats": career_stats}}
+    )
+    
+    # Coin ekle (her 100 puan için 1 coin)
+    coins_earned = score_data.score // 100
+    if coins_earned > 0:
+        await db.users.update_one(
+            {"user_id": user["user_id"]},
+            {"$inc": {"coins": coins_earned}}
+        )
+    
+    return {
+        "message": "Score submitted",
+        "is_new_high_score": is_new_high_score,
+        "high_score": career_stats["high_score"],
+        "coins_earned": coins_earned,
+        "stats": career_stats
+    }
+
+@api_router.get("/career-path/leaderboard")
+async def get_career_path_leaderboard(limit: int = 50):
+    """Get career path leaderboard"""
+    # En yüksek skorlara göre sırala
+    users = await db.users.find(
+        {"career_path_stats.high_score": {"$gt": 0}},
+        {
+            "_id": 0, 
+            "user_id": 1, 
+            "username": 1, 
+            "avatar": 1,
+            "career_path_stats": 1
+        }
+    ).sort("career_path_stats.high_score", -1).limit(limit).to_list(limit)
+    
+    leaderboard = []
+    for i, user in enumerate(users):
+        stats = user.get("career_path_stats", {})
+        leaderboard.append({
+            "rank": i + 1,
+            "user_id": user.get("user_id"),
+            "username": user.get("username", "Anonim"),
+            "avatar": user.get("avatar", "⚽"),
+            "high_score": stats.get("high_score", 0),
+            "games_played": stats.get("games_played", 0),
+            "correct_guesses": stats.get("correct_guesses", 0),
+            "best_streak": stats.get("best_streak", 0)
+        })
+    
+    return leaderboard
+
+@api_router.get("/career-path/my-stats")
+async def get_my_career_path_stats(request: Request):
+    """Get current user's career path stats"""
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    stats = user.get("career_path_stats", {
+        "high_score": 0,
+        "total_score": 0,
+        "games_played": 0,
+        "correct_guesses": 0,
+        "best_streak": 0
+    })
+    
+    # Kullanıcının sıralamasını bul
+    rank = await db.users.count_documents({
+        "career_path_stats.high_score": {"$gt": stats.get("high_score", 0)}
+    }) + 1
+    
+    return {
+        "stats": stats,
+        "rank": rank,
+        "coins": user.get("coins", 0)
+    }
+
 # ============ FRIENDS ROUTES ============
 
 @api_router.get("/friends")
